@@ -38,6 +38,7 @@ struct VisualizerView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                 phase = .pi * 2

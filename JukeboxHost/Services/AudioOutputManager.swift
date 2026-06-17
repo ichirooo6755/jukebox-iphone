@@ -1,6 +1,9 @@
-import AVFoundation
 import Combine
 import Foundation
+
+#if os(iOS)
+import AVFoundation
+#endif
 
 @MainActor
 final class AudioOutputManager: ObservableObject {
@@ -8,6 +11,7 @@ final class AudioOutputManager: ObservableObject {
     @Published private(set) var routeDetail = "内蔵スピーカー"
     @Published private(set) var isHeadphoneConnected = false
 
+    #if os(iOS)
     private var routeObserver: NSObjectProtocol?
 
     init() {
@@ -31,7 +35,6 @@ final class AudioOutputManager: ObservableObject {
     func configureSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            // 3.5mm / Lightning変換アダプタ経由の有線出力を優先。DACは使わない。
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
         } catch {
@@ -64,6 +67,15 @@ final class AudioOutputManager: ObservableObject {
             }
         }
     }
+    #else
+    init() {
+        routeLabel = "Mac 出力"
+        routeDetail = "システムの既定オーディオ出力"
+        isHeadphoneConnected = false
+    }
+
+    func configureSession() {}
+    #endif
 
     var statusLine: String {
         "出力: \(routeLabel)"

@@ -1,4 +1,16 @@
-import { api, getBaseURL, getNickname, setBaseURL, setNickname } from './api.js';
+import {
+  api,
+  artworkSrc,
+  ensureParticipant,
+  getBaseURL,
+  getNickname,
+  getSkippedServices,
+  isOnboarded,
+  setBaseURL,
+  setNickname,
+  setOnboarded,
+  skipService,
+} from './api.js';
 import { connect, onEvent } from './ws.js';
 
 const state = {
@@ -8,6 +20,7 @@ const state = {
   isPlaying: false,
   skipVote: { votes: 0, required: 2, voters: [] },
   searchType: 'tracks',
+  useUnifiedSearch: true,
 };
 
 const els = {
@@ -20,18 +33,28 @@ const els = {
   npProgress: document.getElementById('np-progress'),
   npElapsed: document.getElementById('np-elapsed'),
   npDuration: document.getElementById('np-duration'),
+  togglePlayback: document.getElementById('toggle-playback'),
+  skipTrack: document.getElementById('skip-track'),
   voteSkip: document.getElementById('vote-skip'),
   skipVotes: document.getElementById('skip-votes'),
   skipRequired: document.getElementById('skip-required'),
   searchInput: document.getElementById('search-input'),
   searchService: document.getElementById('search-service'),
   searchResults: document.getElementById('search-results'),
+  searchTypeSegments: document.getElementById('search-type-segments'),
   queueList: document.getElementById('queue-list'),
   nickname: document.getElementById('nickname'),
   hostUrl: document.getElementById('host-url'),
   accountStatus: document.getElementById('account-status'),
   authStatusList: document.getElementById('auth-status-list'),
+  onboarding: document.getElementById('onboarding'),
+  onboardingName: document.getElementById('onboarding-name'),
+  onboardingJoin: document.getElementById('onboarding-join'),
+  serviceDock: document.getElementById('service-dock'),
+  toast: document.getElementById('toast'),
 };
+
+let toastTimer = null;
 
 function formatTime(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -40,6 +63,27 @@ function formatTime(sec) {
 
 function serviceLabel(service) {
   return ({ apple_music: 'Apple Music', spotify: 'Spotify', youtube: 'YouTube' })[service] || service;
+}
+
+function kindLabel(kind) {
+  return ({ track: '曲', playlist: 'プレイリスト', artist: 'アーティスト' })[kind] || '';
+}
+
+function showToast(message) {
+  els.toast.textContent = message;
+  els.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    els.toast.hidden = true;
+  }, 2200);
+}
+
+function artworkMarkup(url, size = 56) {
+  const src = artworkSrc(url);
+  if (!src) {
+    return `<div class="artwork placeholder" style="width:${size}px;height:${size}px;font-size:1.5rem">♪</div>`;
+  }
+  return `<img src="${escapeHtml(src)}" alt="" loading="lazy" width="${size}" height="${size}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'artwork placeholder',style:'width:${size}px;height:${size}px;font-size:1.5rem',textContent:'♪'}))">`;
 }
 
 function applyState(payload) {
@@ -62,9 +106,12 @@ function renderNowPlaying(trackChanged = false) {
     card.classList.add('track-change');
   }
 
+  els.togglePlayback.textContent = state.isPlaying ? '⏸' : '▶';
+  els.togglePlayback.setAttribute('aria-label', state.isPlaying ? '一時停止' : '再生');
+
   if (!current) {
     els.npTitle.textContent = '再生待ち';
-    els.npArtist.textContent = 'キューに曲を追加してください';
+    els.npArtist.textContent = 'キューに曲を追加するか、再生ボタンを押してください';
     els.npService.textContent = '—';
     els.npArtwork.hidden = true;
     els.npPlaceholder.hidden = false;
@@ -86,8 +133,9 @@ function renderNowPlaying(trackChanged = false) {
   els.npService.textContent = serviceLabel(current.service);
   els.npDuration.textContent = formatTime(current.duration);
 
-  if (current.artwork_url) {
-    els.npArtwork.src = current.artwork_url;
+  const artwork = artworkSrc(current.artwork_url);
+  if (artwork) {
+    els.npArtwork.src = artwork;
     els.npArtwork.hidden = false;
     els.npPlaceholder.hidden = true;
   } else {
@@ -107,14 +155,14 @@ function renderQueue() {
     return;
   }
 
-  state.queue.forEach((item, index) => {
+  state.queue.forEach((item) => {
     const li = document.createElement('li');
     li.className = 'queue-item';
     li.draggable = true;
     li.dataset.id = item.id;
     li.innerHTML = `
       <span class="drag-handle">≡</span>
-      ${item.artwork_url ? `<img src="${item.artwork_url}" alt="">` : '<div class="artwork placeholder" style="width:56px;height:56px;font-size:1.5rem">♪</div>'}
+      ${artworkMarkup(item.artwork_url)}
       <div class="meta">
         <h3>${escapeHtml(item.title)}</h3>
         <p>${escapeHtml(item.artist)} · ${serviceLabel(item.service)} · ${escapeHtml(item.added_by)}</p>
@@ -124,6 +172,7 @@ function renderQueue() {
 
     li.querySelector('.remove').addEventListener('click', async () => {
       await api.removeFromQueue(item.id);
+      showToast('キューから削除しました');
     });
 
     li.addEventListener('dragstart', () => li.classList.add('dragging'));
@@ -147,12 +196,44 @@ function renderQueue() {
   });
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function updateSearchMode() {
+  const service = els.searchService.value;
+  state.useUnifiedSearch = service === 'apple_music';
+  els.searchTypeSegments.hidden = state.useUnifiedSearch;
+  if (state.useUnifiedSearch) {
+    els.searchInput.placeholder = '曲・アーティスト・プレイリストを検索';
+  } else {
+    els.searchInput.placeholder = state.searchType === 'playlists'
+      ? 'プレイリストを検索'
+      : '曲を検索';
+  }
+}
+
+async function addSearchResult(item) {
+  const addedBy = getNickname() || await ensureParticipant();
+
+  if (item.kind === 'playlist') {
+    const added = await api.importPlaylist(item.service, item.id, addedBy, 50);
+    showToast(`プレイリストを追加しました（${added.length}曲）`);
+    return;
+  }
+
+  if (item.kind === 'artist') {
+    const added = await api.importArtist(item.service, item.id, addedBy, 5);
+    showToast(`アーティストの曲を追加しました（${added.length}曲）`);
+    return;
+  }
+
+  await api.addToQueue({
+    title: item.title,
+    artist: item.subtitle || item.artist,
+    artwork_url: item.artwork_url,
+    service: item.service,
+    music_id: item.music_id,
+    duration: item.duration || 0,
+    added_by: addedBy,
+  });
+  showToast(`「${item.title}」をキューに追加しました`);
 }
 
 let searchTimer = null;
@@ -163,38 +244,45 @@ async function runSearch() {
     return;
   }
   try {
-    const results = state.searchType === 'playlists'
-      ? await api.playlists(q, els.searchService.value)
-      : await api.search(q, els.searchService.value);
+    let results;
+    if (state.useUnifiedSearch) {
+      results = await api.unifiedSearch(q, els.searchService.value);
+    } else {
+      results = state.searchType === 'playlists'
+        ? await api.playlists(q, els.searchService.value)
+        : await api.search(q, els.searchService.value);
+      results = results.map((row) => ({
+        ...row,
+        kind: state.searchType === 'playlists' ? 'playlist' : 'track',
+        subtitle: row.artist || row.owner,
+        id: row.music_id || row.id,
+      }));
+    }
+
     els.searchResults.innerHTML = '';
     if (!results.length) {
       els.searchResults.innerHTML = '<li class="empty">結果がありません</li>';
       return;
     }
+
     results.forEach((item) => {
       const li = document.createElement('li');
       li.className = 'result-item';
+      const badge = item.kind && item.kind !== 'track' ? `<span class="kind-badge">${kindLabel(item.kind)}</span>` : '';
+      const actionLabel = item.kind === 'playlist' ? '↧' : item.kind === 'artist' ? '↧' : '＋';
       li.innerHTML = `
-        ${item.artwork_url ? `<img src="${item.artwork_url}" alt="">` : '<div class="artwork placeholder" style="width:56px;height:56px;font-size:1.5rem">♪</div>'}
+        ${artworkMarkup(item.artwork_url)}
         <div class="meta">
-          <h3>${escapeHtml(item.title)}</h3>
-          <p>${escapeHtml(item.artist || item.owner)} · ${serviceLabel(item.service)}${item.track_count ? ` · ${item.track_count}曲` : ''}</p>
+          <h3>${escapeHtml(item.title)} ${badge}</h3>
+          <p>${escapeHtml(item.subtitle || item.artist || item.owner)} · ${serviceLabel(item.service)}${item.track_count ? ` · ${item.track_count}曲` : ''}</p>
         </div>
-        <button class="btn icon add" aria-label="追加">${state.searchType === 'playlists' ? '↧' : '＋'}</button>
+        <button class="btn icon add" aria-label="追加">${actionLabel}</button>
       `;
       li.querySelector('.add').addEventListener('click', async () => {
-        if (state.searchType === 'playlists') {
-          await api.importPlaylist(item.service, item.id, getNickname(), 50);
-        } else {
-          await api.addToQueue({
-            title: item.title,
-            artist: item.artist,
-            artwork_url: item.artwork_url,
-            service: item.service,
-            music_id: item.music_id,
-            duration: item.duration,
-            added_by: getNickname(),
-          });
+        try {
+          await addSearchResult(item);
+        } catch (err) {
+          showToast(`追加に失敗: ${err.message}`);
         }
       });
       els.searchResults.appendChild(li);
@@ -221,11 +309,12 @@ function setupAccount() {
 
   document.getElementById('save-nickname').addEventListener('click', async () => {
     const name = els.nickname.value.trim();
-    if (!name) return;
-    setNickname(name);
     try {
-      await api.registerUser(name);
-      els.accountStatus.textContent = `保存しました: ${name}`;
+      const user = await api.registerUser(name);
+      setNickname(user.nickname);
+      els.nickname.value = user.nickname;
+      els.accountStatus.textContent = `保存しました: ${user.nickname}`;
+      await refreshAuthStatus();
     } catch (err) {
       els.accountStatus.textContent = err.message;
     }
@@ -253,6 +342,7 @@ function setupSearch() {
       document.querySelectorAll('[data-search-type]').forEach((b) => b.classList.remove('active'));
       button.classList.add('active');
       state.searchType = button.dataset.searchType;
+      updateSearchMode();
       runSearch();
     });
   });
@@ -261,7 +351,26 @@ function setupSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(runSearch, 300);
   });
-  els.searchService.addEventListener('change', runSearch);
+  els.searchService.addEventListener('change', () => {
+    updateSearchMode();
+    runSearch();
+  });
+
+  els.togglePlayback.addEventListener('click', async () => {
+    try {
+      await api.togglePlayback();
+    } catch (err) {
+      showToast(`再生エラー: ${err.message}`);
+    }
+  });
+
+  els.skipTrack.addEventListener('click', async () => {
+    try {
+      await api.skipTrack();
+    } catch (err) {
+      showToast(`スキップエラー: ${err.message}`);
+    }
+  });
 
   els.voteSkip.addEventListener('click', async () => {
     try {
@@ -270,11 +379,27 @@ function setupSearch() {
       console.error(err);
     }
   });
+
+  updateSearchMode();
+}
+
+function renderAuthAction(status) {
+  if (status.is_authenticated) {
+    return '<span class="auth-pill ok">OK</span>';
+  }
+  if (status.service === 'apple_music') {
+    return '<span class="auth-pill warn">ホスト共有</span>';
+  }
+  if (!status.login_url) {
+    return '<span class="auth-pill warn">要設定</span>';
+  }
+  return `<a class="btn auth-login" href="${status.login_url}" target="_self">ログイン</a>`;
 }
 
 async function refreshAuthStatus() {
   if (!els.authStatusList) return;
   try {
+    await ensureParticipant();
     const statuses = await api.authStatus();
     els.authStatusList.innerHTML = '';
     statuses.forEach((status) => {
@@ -285,13 +410,88 @@ async function refreshAuthStatus() {
           <strong>${serviceLabel(status.service)}</strong>
           <p>${escapeHtml(status.message)}</p>
         </div>
-        ${status.login_url ? `<a class="btn auth-login" href="${status.login_url}">ログイン</a>` : `<span class="auth-pill ${status.is_authenticated ? 'ok' : 'warn'}">${status.is_authenticated ? 'OK' : '要設定'}</span>`}
+        ${renderAuthAction(status)}
       `;
       els.authStatusList.appendChild(row);
     });
+    renderServiceDock(statuses);
   } catch (err) {
     els.authStatusList.innerHTML = `<p class="muted">認証状態を取得できません: ${escapeHtml(err.message)}</p>`;
   }
+}
+
+function renderServiceDock(statuses) {
+  if (!els.serviceDock || els.onboarding.hidden) return;
+  const skipped = new Set(getSkippedServices());
+  els.serviceDock.hidden = false;
+  els.serviceDock.innerHTML = statuses.map((status) => {
+    if (status.is_authenticated || skipped.has(status.service)) {
+      return `<div class="dock-item done">${serviceLabel(status.service)} ✓</div>`;
+    }
+    if (status.service === 'apple_music' || !status.login_url) {
+      return `<button class="dock-item skip" data-service="${status.service}">${serviceLabel(status.service)} · Skip</button>`;
+    }
+    return `
+      <a class="dock-item login" href="${status.login_url}">${serviceLabel(status.service)} · ログイン</a>
+      <button class="dock-item skip" data-service="${status.service}">Skip</button>
+    `;
+  }).join('');
+
+  els.serviceDock.querySelectorAll('.dock-item.skip').forEach((button) => {
+    button.addEventListener('click', () => {
+      skipService(button.dataset.service);
+      refreshAuthStatus();
+      maybeFinishOnboarding(statuses);
+    });
+  });
+
+  maybeFinishOnboarding(statuses);
+}
+
+function maybeFinishOnboarding(statuses) {
+  const skipped = new Set(getSkippedServices());
+  const allHandled = statuses.every(
+    (status) => status.is_authenticated || skipped.has(status.service) || !status.login_url
+  );
+  if (!allHandled) return;
+
+  setTimeout(() => {
+    els.onboarding.hidden = true;
+    els.serviceDock.hidden = true;
+  }, 600);
+}
+
+function setupOnboarding() {
+  const params = new URLSearchParams(window.location.search);
+  const hostParam = params.get('host');
+  if (hostParam) {
+    setBaseURL(hostParam);
+  }
+
+  const forceJoin = params.get('join') === '1';
+  if (isOnboarded() && !forceJoin) {
+    els.onboarding.hidden = true;
+    return;
+  }
+
+  if (forceJoin) {
+    localStorage.removeItem('jukebox_onboarded');
+  }
+
+  els.onboarding.hidden = false;
+  els.onboardingJoin.addEventListener('click', async () => {
+    const name = els.onboardingName.value.trim();
+    try {
+      const user = await api.registerUser(name);
+      setNickname(user.nickname);
+      setOnboarded();
+      els.onboarding.querySelector('.onboarding-card').hidden = true;
+      await refreshAuthStatus();
+      showToast(`ようこそ、${user.nickname} さん`);
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
 }
 
 function setupConnection() {
@@ -312,12 +512,31 @@ function setupConnection() {
   });
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 async function bootstrap() {
   setupTabs();
   setupAccount();
   setupSearch();
   setupConnection();
-  refreshAuthStatus();
+  setupOnboarding();
+
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab) {
+    const target = document.querySelector(`.tab[data-tab="${tab}"]`);
+    target?.click();
+  }
+
+  if (params.get('auth') === 'youtube' && params.get('ok') === '1') {
+    showToast('YouTube にログインしました');
+  }
 
   try {
     const initial = await api.state();
@@ -327,6 +546,15 @@ async function bootstrap() {
     els.connection.classList.remove('offline');
   } catch (_) {
     els.connection.textContent = '未接続';
+  }
+
+  if (isOnboarded()) {
+    try {
+      await ensureParticipant();
+      await refreshAuthStatus();
+    } catch (_) {
+      // ignore
+    }
   }
 
   connect();

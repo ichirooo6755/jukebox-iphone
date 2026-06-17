@@ -10,7 +10,10 @@ xcuserdata/
 .build/
 Package.resolved
 
-# Secrets
+# Secrets（認証情報は secrets/ のみに置く。GitHub に絶対 push しない）
+secrets/
+client_secret*.json
+*credentials*.json
 .env
 Secrets.plist
 Config.xcconfig
@@ -21,3 +24,6 @@ Config.xcconfig
 # IDE
 .idea/
 .vscode/
+
+# Netlify local link state
+web/landing/.netlify/

@@ -11,6 +11,7 @@ struct RootView: View {
                 HostSetupView()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut, value: model.isServerRunning)
     }
 }

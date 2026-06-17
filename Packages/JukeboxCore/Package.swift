@@ -5,7 +5,7 @@ let package = Package(
     name: "JukeboxCore",
     platforms: [
         .iOS(.v16),
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     products: [
         .library(name: "JukeboxCore", targets: ["JukeboxCore"])

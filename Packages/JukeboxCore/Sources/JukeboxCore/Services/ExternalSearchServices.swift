@@ -1,5 +1,64 @@
 import Foundation
 
+private struct PersistedOAuthToken {
+    var accessToken: String?
+    var refreshToken: String?
+    var expiry: Date?
+}
+
+private struct OAuthTokenStore {
+    private let namespace: String
+    private let defaults = UserDefaults.standard
+
+    init(namespace: String) {
+        self.namespace = namespace
+    }
+
+    func load(participant: String? = nil) -> PersistedOAuthToken {
+        PersistedOAuthToken(
+            accessToken: defaults.string(forKey: key("access_token", participant: participant)),
+            refreshToken: defaults.string(forKey: key("refresh_token", participant: participant)),
+            expiry: expiryDate(participant: participant)
+        )
+    }
+
+    func save(participant: String? = nil, accessToken: String?, refreshToken: String?, expiry: Date?) {
+        set(accessToken, for: "access_token", participant: participant)
+        if let refreshToken {
+            set(refreshToken, for: "refresh_token", participant: participant)
+        }
+        if let expiry {
+            defaults.set(expiry.timeIntervalSince1970, forKey: key("expiry", participant: participant))
+        }
+    }
+
+    private func set(_ value: String?, for suffix: String, participant: String?) {
+        if let value, !value.isEmpty {
+            defaults.set(value, forKey: key(suffix, participant: participant))
+        }
+    }
+
+    private func expiryDate(participant: String?) -> Date? {
+        let value = defaults.double(forKey: key("expiry", participant: participant))
+        return value > 0 ? Date(timeIntervalSince1970: value) : nil
+    }
+
+    private func key(_ suffix: String, participant: String?) -> String {
+        if let participant {
+            let id = Self.sanitizeParticipant(participant)
+            return "jukebox.oauth.\(namespace).participant.\(id).\(suffix)"
+        }
+        return "jukebox.oauth.\(namespace).\(suffix)"
+    }
+
+    private static func sanitizeParticipant(_ participant: String) -> String {
+        participant
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "_")
+    }
+}
+
 public actor SpotifySearchService {
     public static let shared = SpotifySearchService()
 
@@ -13,6 +72,14 @@ public actor SpotifySearchService {
     private let clientID = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_ID"]
     private let clientSecret = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_SECRET"]
     private let redirectPath = "/api/auth/spotify/callback"
+    private let tokenStore = OAuthTokenStore(namespace: "spotify")
+
+    private init() {
+        let persisted = tokenStore.load()
+        userAccessToken = persisted.accessToken
+        userRefreshToken = persisted.refreshToken
+        userTokenExpiry = persisted.expiry
+    }
 
     public func authStatus(baseURL: String) async -> ServiceAuthStatus {
         let configured = clientID?.isEmpty == false && clientSecret?.isEmpty == false
@@ -71,6 +138,7 @@ public actor SpotifySearchService {
         if let expiresIn = json["expires_in"] as? Int {
             userTokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
         }
+        tokenStore.save(accessToken: userAccessToken, refreshToken: userRefreshToken, expiry: userTokenExpiry)
         return true
     }
 
@@ -223,6 +291,7 @@ public actor SpotifySearchService {
         if let expiresIn = json["expires_in"] as? Int {
             userTokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
         }
+        tokenStore.save(accessToken: userAccessToken, refreshToken: userRefreshToken, expiry: userTokenExpiry)
         return token
     }
 
@@ -262,33 +331,59 @@ public actor YouTubeSearchService {
     private let clientID = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_ID"]
     private let clientSecret = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_SECRET"]
     private let redirectPath = "/api/auth/youtube/callback"
-    private var pendingState: String?
-    private var accessToken: String?
-    private var refreshToken: String?
-    private var tokenExpiry: Date?
+    private var pendingStates: [String: String] = [:]
+    private let tokenStore = OAuthTokenStore(namespace: "youtube")
 
-    public func authStatus(baseURL: String) async -> ServiceAuthStatus {
+    private func redirectURI(baseURL: String) -> String {
+        if let override = ProcessInfo.processInfo.environment["YOUTUBE_OAUTH_REDIRECT_URI"],
+           !override.isEmpty {
+            return override
+        }
+        return baseURL + redirectPath
+    }
+
+    private func normalizedParticipant(_ participant: String?) -> String? {
+        guard let participant else { return nil }
+        let trimmed = participant.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    public func authStatus(baseURL: String, participant: String?) async -> ServiceAuthStatus {
         let configured = clientID?.isEmpty == false && clientSecret?.isEmpty == false
+        guard let participant = normalizedParticipant(participant) else {
+            return ServiceAuthStatus(
+                service: .youtube,
+                isConfigured: configured || apiKey?.isEmpty == false,
+                isAuthenticated: false,
+                loginURL: nil,
+                message: "参加後に YouTube へログインできます（参加者ごと）"
+            )
+        }
+
+        let persisted = tokenStore.load(participant: participant)
+        let authenticated = persisted.accessToken != nil
+        let encoded = participant.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? participant
         return ServiceAuthStatus(
             service: .youtube,
             isConfigured: configured || apiKey?.isEmpty == false,
-            isAuthenticated: accessToken != nil,
-            loginURL: configured ? "\(baseURL)/api/auth/youtube/start" : nil,
+            isAuthenticated: authenticated,
+            loginURL: configured ? "\(baseURL)/api/auth/youtube/start?participant=\(encoded)" : nil,
             message: configured
-                ? (accessToken == nil ? "YouTubeにログインできます" : "YouTubeログイン済み")
+                ? (authenticated ? "YouTubeログイン済み（\(participant)）" : "YouTubeにログインできます")
                 : "公開検索はYOUTUBE_API_KEY、ログインはYOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET が必要です"
         )
     }
 
-    public func beginAuthorization(baseURL: String) async -> URL? {
-        guard let clientID, !clientID.isEmpty else { return nil }
+    public func beginAuthorization(baseURL: String, participant: String?) async -> URL? {
+        guard let clientID, !clientID.isEmpty,
+              let participant = normalizedParticipant(participant) else { return nil }
         let state = UUID().uuidString
-        pendingState = state
+        pendingStates[state] = participant
 
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "redirect_uri", value: redirectURI(baseURL: baseURL)),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: "https://www.googleapis.com/auth/youtube.readonly"),
             URLQueryItem(name: "access_type", value: "offline"),
@@ -299,7 +394,7 @@ public actor YouTubeSearchService {
     }
 
     public func completeAuthorization(code: String, state: String, baseURL: String) async -> Bool {
-        guard state == pendingState,
+        guard let participant = pendingStates.removeValue(forKey: state),
               let clientID, let clientSecret,
               !clientID.isEmpty, !clientSecret.isEmpty else { return false }
 
@@ -311,7 +406,7 @@ public actor YouTubeSearchService {
             URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "client_secret", value: clientSecret),
-            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "redirect_uri", value: redirectURI(baseURL: baseURL)),
             URLQueryItem(name: "grant_type", value: "authorization_code")
         ]
         request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
@@ -321,28 +416,41 @@ public actor YouTubeSearchService {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let token = json["access_token"] as? String else { return false }
 
-        accessToken = token
-        refreshToken = json["refresh_token"] as? String
+        let refresh = json["refresh_token"] as? String
+        var expiry: Date?
         if let expiresIn = json["expires_in"] as? Int {
-            tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+            expiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
         }
+        tokenStore.save(
+            participant: participant,
+            accessToken: token,
+            refreshToken: refresh ?? tokenStore.load(participant: participant).refreshToken,
+            expiry: expiry
+        )
         return true
     }
 
-    public func search(query: String) async -> [TrackSearchResult] {
-        guard let apiKey else { return [] }
-
+    public func search(query: String, participant: String?) async -> [TrackSearchResult] {
         var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search")!
-        components.queryItems = [
+        var queryItems = [
             URLQueryItem(name: "part", value: "snippet"),
             URLQueryItem(name: "type", value: "video"),
             URLQueryItem(name: "maxResults", value: "20"),
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "key", value: apiKey)
+            URLQueryItem(name: "q", value: query)
         ]
+        if let apiKey, !apiKey.isEmpty {
+            queryItems.append(URLQueryItem(name: "key", value: apiKey))
+        }
+        components.queryItems = queryItems
         guard let url = components.url else { return [] }
 
-        guard let (data, response) = try? await URLSession.shared.data(from: url),
+        var request = URLRequest(url: url)
+        if apiKey?.isEmpty != false, let token = try? await usableToken(participant: participant) {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        guard (apiKey?.isEmpty == false || request.value(forHTTPHeaderField: "Authorization") != nil),
+              let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             return []
         }
@@ -371,8 +479,8 @@ public actor YouTubeSearchService {
         }
     }
 
-    public func searchPlaylists(query: String) async -> [PlaylistSummary] {
-        if let token = try? await usableToken() {
+    public func searchPlaylists(query: String, participant: String?) async -> [PlaylistSummary] {
+        if let token = try? await usableToken(participant: participant) {
             var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/playlists")!
             components.queryItems = [
                 URLQueryItem(name: "part", value: "snippet,contentDetails"),
@@ -443,7 +551,7 @@ public actor YouTubeSearchService {
         }
     }
 
-    public func playlistTracks(playlistID: String, limit: Int) async -> [TrackSearchResult] {
+    public func playlistTracks(playlistID: String, limit: Int, participant: String?) async -> [TrackSearchResult] {
         var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/playlistItems")!
         var queryItems = [
             URLQueryItem(name: "part", value: "snippet,contentDetails"),
@@ -457,7 +565,7 @@ public actor YouTubeSearchService {
         guard let url = components.url else { return [] }
 
         var request = URLRequest(url: url)
-        if let token = try? await usableToken() {
+        if let token = try? await usableToken(participant: participant) {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -487,15 +595,23 @@ public actor YouTubeSearchService {
         }
     }
 
-    private func usableToken() async throws -> String {
-        if let accessToken, let expiry = tokenExpiry, expiry > Date() {
+    private func usableToken(participant: String?) async throws -> String {
+        guard let participant = normalizedParticipant(participant) else {
+            throw SearchServiceError.tokenFailed
+        }
+        let persisted = tokenStore.load(participant: participant)
+        if let accessToken = persisted.accessToken,
+           let expiry = persisted.expiry,
+           expiry > Date() {
             return accessToken
         }
-        return try await refreshAccessToken()
+        return try await refreshAccessToken(participant: participant)
     }
 
-    private func refreshAccessToken() async throws -> String {
-        guard let refreshToken, let clientID, let clientSecret else {
+    private func refreshAccessToken(participant: String) async throws -> String {
+        let persisted = tokenStore.load(participant: participant)
+        guard let refreshToken = persisted.refreshToken,
+              let clientID, let clientSecret else {
             throw SearchServiceError.tokenFailed
         }
         var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
@@ -515,10 +631,16 @@ public actor YouTubeSearchService {
               let token = json["access_token"] as? String else {
             throw SearchServiceError.tokenFailed
         }
-        accessToken = token
+        var expiry: Date?
         if let expiresIn = json["expires_in"] as? Int {
-            tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+            expiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
         }
+        tokenStore.save(
+            participant: participant,
+            accessToken: token,
+            refreshToken: refreshToken,
+            expiry: expiry
+        )
         return token
     }
 }

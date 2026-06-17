@@ -36,9 +36,37 @@ final class AppModel: ObservableObject {
     @Published private(set) var isServerRunning = false
     @Published private(set) var musicAuthorized = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var serviceAuthStatuses: [ServiceAuthStatus] = []
     @Published var displayMode: HostDisplayMode = .nowPlayingQueue
     @Published private(set) var visualizerLevels: [CGFloat] = Array(repeating: 0.1, count: 32)
     @Published var crossfadeOpacity: Double = 1.0
+
+    var participantURL: String? {
+        let ip = serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
+        guard let ip else { return nil }
+        let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
+        let localURL = "http://\(ip):\(port)"
+        return Self.joinURL(for: localURL) ?? localURL
+    }
+
+    var participantLocalURL: String? {
+        let ip = serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
+        guard let ip else { return nil }
+        let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
+        return "http://\(ip):\(port)"
+    }
+
+    private static func joinURL(for localURL: String) -> String? {
+        guard let joinBase = ProcessInfo.processInfo.environment["JUKEBOX_JOIN_URL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !joinBase.isEmpty else { return nil }
+
+        let normalizedBase = joinBase.hasSuffix("/") ? String(joinBase.dropLast()) : joinBase
+        guard let encoded = localURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return nil
+        }
+        return "\(normalizedBase)?host=\(encoded)"
+    }
 
     private let playbackEngine = PlaybackEngine()
     private let lifecycle = HostLifecycleManager()
@@ -46,7 +74,36 @@ final class AppModel: ObservableObject {
     private var visualizerTask: Task<Void, Never>?
     private var subscriptionID: UUID?
     private var webRoot: URL? {
-        Bundle.main.resourceURL?.appendingPathComponent("web")
+        Self.resolveWebRoot()
+    }
+
+    private static func resolveWebRoot() -> URL? {
+        let fm = FileManager.default
+        let candidates: [URL] = [
+            Bundle.main.resourceURL?.appendingPathComponent("web"),
+            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/web"),
+        ].compactMap { $0 } + developmentWebRootCandidates()
+
+        for root in candidates {
+            let index = root.appendingPathComponent("index.html")
+            if fm.fileExists(atPath: index.path) {
+                return root
+            }
+        }
+        return nil
+    }
+
+    private static func developmentWebRootCandidates() -> [URL] {
+        #if DEBUG
+        let sourceFile = URL(fileURLWithPath: #filePath)
+        let repoRoot = sourceFile
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return [repoRoot.appendingPathComponent("web")]
+        #else
+        return []
+        #endif
     }
 
     init() {
@@ -74,11 +131,18 @@ final class AppModel: ObservableObject {
         }
 
         musicAuthorized = await AppleMusicSearchService.requestAuthorization()
+        await refreshAuthStatuses()
         playbackState = await store.currentState()
+        await startHostServer()
     }
 
     func startHostServer() async {
         guard !isServerRunning else { return }
+
+        guard let webRoot else {
+            errorMessage = "参加者用 Web UI が見つかりません。アプリを再ビルドしてから再度お試しください。"
+            return
+        }
 
         let jukeboxServer = JukeboxServer(store: store, webRoot: webRoot)
         server = jukeboxServer
@@ -87,6 +151,7 @@ final class AppModel: ObservableObject {
             try await jukeboxServer.start()
             isServerRunning = true
             await refreshStatus()
+            await refreshAuthStatuses()
             try await store.restoreSession()
             startProgressPolling()
             startVisualizer()
@@ -120,6 +185,7 @@ final class AppModel: ObservableObject {
         do {
             try await jukeboxServer.start()
             await refreshStatus()
+            await refreshAuthStatuses()
             if wasPlaying {
                 try? await store.togglePlayback()
                 try? await store.togglePlayback()
@@ -155,6 +221,12 @@ final class AppModel: ObservableObject {
             wifiConnected: JukeboxServer.localIPAddress() != nil
         )
         playbackState = await store.currentState()
+    }
+
+    private func refreshAuthStatuses() async {
+        let ip = JukeboxServer.localIPAddress() ?? "127.0.0.1"
+        let baseURL = "http://\(ip):\(JukeboxServer.defaultPort)"
+        serviceAuthStatuses = await SearchCoordinator.shared.authStatuses(baseURL: baseURL)
     }
 
     private func startProgressPolling() {

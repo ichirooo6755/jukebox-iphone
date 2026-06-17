@@ -1,6 +1,11 @@
 import Foundation
 import Network
+
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 @MainActor
 final class HostLifecycleManager {
@@ -12,6 +17,9 @@ final class HostLifecycleManager {
     private var watchdogTask: Task<Void, Never>?
     private var foregroundObserver: NSObjectProtocol?
     private var backgroundObserver: NSObjectProtocol?
+    #if os(macOS)
+    private let sleepInhibitor = MacSleepInhibitor()
+    #endif
 
     func start(
         onNetworkRestored: @escaping () async -> Void,
@@ -20,9 +28,17 @@ final class HostLifecycleManager {
         self.onNetworkRestored = onNetworkRestored
         self.onServerRestartNeeded = onServerRestartNeeded
 
+        #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = true
+        #elseif os(macOS)
+        sleepInhibitor.start()
+        #endif
 
+        #if os(iOS)
         pathMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
+        #else
+        pathMonitor = NWPathMonitor()
+        #endif
         pathMonitor?.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
                 guard let self else { return }
@@ -35,6 +51,7 @@ final class HostLifecycleManager {
         }
         pathMonitor?.start(queue: monitorQueue)
 
+        #if os(iOS)
         foregroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
             object: nil,
@@ -47,9 +64,16 @@ final class HostLifecycleManager {
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: .main
-        ) { _ in
-            // バックグラウンドでも音声再生を継続（audio background mode）
+        ) { _ in }
+        #elseif os(macOS)
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.onServerRestartNeeded?() }
         }
+        #endif
 
         startWatchdog()
     }
@@ -59,7 +83,12 @@ final class HostLifecycleManager {
         watchdogTask = nil
         pathMonitor?.cancel()
         pathMonitor = nil
+
+        #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = false
+        #elseif os(macOS)
+        sleepInhibitor.stop()
+        #endif
 
         if let foregroundObserver {
             NotificationCenter.default.removeObserver(foregroundObserver)

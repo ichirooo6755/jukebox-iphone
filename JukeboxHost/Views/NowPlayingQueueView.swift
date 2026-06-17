@@ -3,105 +3,73 @@ import SwiftUI
 
 struct NowPlayingQueueView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.horizontalSizeClass) private var hSize
 
     var body: some View {
         GeometryReader { geo in
-            let isWide = geo.size.width > geo.size.height || hSize == .regular
+            let size = geo.size
+            let isWide = size.width >= 720 && size.width > size.height * 0.9
+            let artworkSide = min(size.width * (isWide ? 0.38 : 0.78), size.height * (isWide ? 0.72 : 0.36), 440)
+            let edge = max(20, min(size.width, size.height) * 0.04)
+            let topInset: CGFloat = 56
 
             ZStack {
                 ArtworkBackgroundView(artworkURL: model.playbackState.current?.artworkURL)
 
                 if isWide {
-                    landscapeLayout(geo: geo)
+                    HStack(spacing: edge) {
+                        ZStack {
+                            artworkView
+                                .frame(width: artworkSide, height: artworkSide)
+                        }
+                        .frame(width: size.width * 0.44)
+                        .frame(maxHeight: .infinity)
+
+                        rightColumn(topInset: topInset, edge: edge, queueHeight: max(140, size.height - topInset - 180))
+                    }
+                    .padding(.leading, topInset)
+                    .padding(.trailing, edge)
+                    .padding(.vertical, edge)
+                    .frame(width: size.width, height: size.height)
                 } else {
-                    portraitLayout(geo: geo)
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            artworkView
+                                .frame(width: artworkSide, height: artworkSide)
+                                .padding(.top, topInset)
+
+                            rightColumn(topInset: 0, edge: edge, queueHeight: max(120, size.height * 0.28))
+                        }
+                        .padding(.horizontal, edge)
+                        .padding(.bottom, edge)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(width: size.width, height: size.height)
                 }
             }
         }
-        .ignoresSafeArea()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Landscape (参考画像レイアウト)
-
-    private func landscapeLayout(geo: GeometryProxy) -> some View {
-        HStack(spacing: 0) {
-            // 左: アルバムアート
-            HStack(spacing: 0) {
-                sideRail
-                artworkView
-                    .frame(width: geo.size.height * 0.72, height: geo.size.height * 0.72)
-                    .padding(.leading, 8)
+    private func rightColumn(topInset: CGFloat, edge: CGFloat, queueHeight: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if topInset > 0 {
+                Spacer(minLength: 0)
             }
-            .frame(width: geo.size.width * 0.48)
-
-            // 右: コントロール + キュー
-            VStack(alignment: .leading, spacing: 0) {
-                trackHeader
-                    .padding(.top, 40)
-
-                progressSection
-                    .padding(.top, 20)
-
-                playbackControls
-                    .padding(.top, 28)
-
-                VolumeSliderView()
-                    .padding(.top, 20)
-                    .padding(.trailing, 40)
-
-                Spacer()
-
-                queueSection
-                    .frame(maxHeight: geo.size.height * 0.28)
-
-                footerBar
-                    .padding(.bottom, 16)
-            }
-            .padding(.horizontal, 32)
-            .frame(maxWidth: .infinity)
-        }
-    }
-
-    // MARK: - Portrait
-
-    private func portraitLayout(geo: GeometryProxy) -> some View {
-        VStack(spacing: 16) {
-            statusBar.padding(.top, 8)
-
-            artworkView
-                .frame(width: geo.size.width * 0.72, height: geo.size.width * 0.72)
 
             trackHeader
-            progressSection.padding(.horizontal, 24)
-            playbackControls
-            VolumeSliderView().padding(.horizontal, 32)
+            progressSection
 
             queueSection
-                .frame(maxHeight: geo.size.height * 0.22)
-                .padding(.horizontal, 16)
+                .frame(maxHeight: queueHeight)
 
-            footerBar.padding(.bottom, 12)
+            footerBar
+
+            if topInset > 0 {
+                Spacer(minLength: 0)
+            }
         }
-        .padding(.top, 48)
-    }
-
-    // MARK: - Components
-
-    private var sideRail: some View {
-        VStack {
-            Image(systemName: "airplayaudio")
-                .foregroundColor(.cyan)
-                .font(.title3)
-            Spacer()
-            Image(systemName: model.audioOutput.isHeadphoneConnected ? "headphones" : "speaker.wave.2")
-                .foregroundColor(.white.opacity(0.8))
-        }
-        .padding(.vertical, 24)
-        .padding(.horizontal, 10)
-        .frame(width: 44)
-        .background(Color.black.opacity(0.65), in: Capsule())
-        .padding(.leading, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.top, topInset > 0 ? 8 : 0)
     }
 
     private var artworkView: some View {
@@ -120,7 +88,6 @@ struct NowPlayingQueueView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
         .id(model.playbackState.current?.musicID)
-        .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
     private var artworkPlaceholder: some View {
@@ -130,24 +97,31 @@ struct NowPlayingQueueView: View {
     }
 
     private var trackHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(model.playbackState.current?.title ?? "再生待ち")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(model.playbackState.current?.title ?? "再生待ち")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack {
                 Text(model.playbackState.current?.artist ?? "キューに曲を追加")
                     .font(.title3)
                     .foregroundColor(.white.opacity(0.65))
-            }
-            Spacer()
-            if let service = model.playbackState.current?.service {
-                Text(service.displayName)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.12), in: Capsule())
-                    .foregroundColor(.white.opacity(0.8))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+
+                Spacer(minLength: 8)
+
+                if let service = model.playbackState.current?.service {
+                    Text(service.displayName)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.12), in: Capsule())
+                        .foregroundColor(.white.opacity(0.8))
+                }
             }
         }
     }
@@ -163,7 +137,7 @@ struct NowPlayingQueueView: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.15)).frame(height: 4)
                     Capsule().fill(Color.white.opacity(0.85))
-                        .frame(width: barGeo.size.width * progress, height: 4)
+                        .frame(width: max(0, barGeo.size.width * progress), height: 4)
                 }
             }
             .frame(height: 4)
@@ -178,22 +152,6 @@ struct NowPlayingQueueView: View {
         }
     }
 
-    private var playbackControls: some View {
-        HStack(spacing: 48) {
-            Button { Task { await model.skip() } } label: {
-                Image(systemName: "backward.fill").font(.title)
-            }
-            Button { Task { await model.togglePlayback() } } label: {
-                Image(systemName: model.playbackState.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 44))
-            }
-            Button { Task { await model.skip() } } label: {
-                Image(systemName: "forward.fill").font(.title)
-            }
-        }
-        .foregroundColor(.white)
-    }
-
     private var queueSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("次の曲", systemImage: "list.bullet")
@@ -204,10 +162,11 @@ struct NowPlayingQueueView: View {
                 Text("キューは空です")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.35))
+                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .topLeading)
             } else {
                 ScrollView {
                     VStack(spacing: 6) {
-                        ForEach(model.playbackState.queue.prefix(5)) { item in
+                        ForEach(model.playbackState.queue.prefix(8)) { item in
                             HStack(spacing: 10) {
                                 if let url = item.artworkURL, let imgURL = URL(string: url) {
                                     AsyncImage(url: imgURL) { img in
@@ -228,7 +187,7 @@ struct NowPlayingQueueView: View {
                                         .foregroundColor(.white.opacity(0.45))
                                         .lineLimit(1)
                                 }
-                                Spacer()
+                                Spacer(minLength: 8)
                                 Text(item.service.displayName)
                                     .font(.caption2)
                                     .foregroundColor(.white.opacity(0.35))
@@ -240,6 +199,7 @@ struct NowPlayingQueueView: View {
 
             skipVoteBar
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var skipVoteBar: some View {
@@ -251,38 +211,24 @@ struct NowPlayingQueueView: View {
             Spacer()
         }
         .foregroundColor(.white.opacity(0.45))
-        .padding(.top, 4)
-    }
-
-    private var statusBar: some View {
-        HStack {
-            if let status = model.serverStatus {
-                Label(status.hostIP, systemImage: status.wifiConnected ? "wifi" : "wifi.slash")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 20)
     }
 
     private var footerBar: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Image(systemName: "quote.bubble")
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: model.playbackState.isPlaying ? "waveform" : "pause.circle")
+                Text(model.playbackState.isPlaying ? "再生中" : "停止中")
                 Spacer()
                 Image(systemName: model.audioOutput.isHeadphoneConnected ? "headphones" : "speaker.wave.2.fill")
-                Spacer()
-                Image(systemName: "list.bullet")
             }
-            .font(.title3)
+            .font(.caption)
             .foregroundColor(.white.opacity(0.5))
-            .padding(.horizontal, 40)
 
             Text(model.audioOutput.routeDetail)
                 .font(.caption2)
                 .foregroundColor(.white.opacity(0.4))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func formatTime(_ seconds: Double) -> String {
@@ -291,8 +237,6 @@ struct NowPlayingQueueView: View {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
-
-// MARK: - Background
 
 struct ArtworkBackgroundView: View {
     let artworkURL: String?
@@ -317,6 +261,6 @@ struct ArtworkBackgroundView: View {
                 } placeholder: { EmptyView() }
             }
         }
-        .ignoresSafeArea()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

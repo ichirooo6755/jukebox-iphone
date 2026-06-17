@@ -33,14 +33,18 @@
                 <span id="np-duration">0:00</span>
               </div>
             </div>
-            <button id="vote-skip" class="btn skip-vote" hidden>スキップに投票 (<span id="skip-votes">0</span>/<span id="skip-required">2</span>)</button>
+            <div class="playback-controls">
+              <button id="toggle-playback" class="btn playback primary" aria-label="再生">▶</button>
+              <button id="skip-track" class="btn playback" aria-label="スキップ">⏭</button>
+              <button id="vote-skip" class="btn skip-vote" hidden>スキップに投票 (<span id="skip-votes">0</span>/<span id="skip-required">2</span>)</button>
+            </div>
           </div>
         </div>
       </section>
 
       <section id="view-search" class="view">
         <div class="search-panel">
-          <div class="segmented-control" aria-label="検索タイプ">
+          <div id="search-type-segments" class="segmented-control" aria-label="検索タイプ" hidden>
             <button class="segment active" data-search-type="tracks">曲</button>
             <button class="segment" data-search-type="playlists">プレイリスト</button>
           </div>
@@ -64,7 +68,7 @@
       <section id="view-account" class="view">
         <div class="account-card">
           <label for="nickname">ニックネーム</label>
-          <input id="nickname" type="text" maxlength="24" placeholder="表示名">
+          <input id="nickname" type="text" maxlength="24" placeholder="空白で guest-番号">
           <button id="save-nickname" class="btn primary">保存</button>
           <p id="account-status" class="muted"></p>
         </div>
@@ -75,6 +79,7 @@
         </div>
         <div class="account-card services">
           <h3>サービス</h3>
+          <p class="hint">Apple Music はホスト共有です。検索で選んだ曲IDをホストが MusicKit で再生します。YouTube は参加者ごとにログインできます。</p>
           <div id="auth-status-list" class="auth-status-list"></div>
         </div>
       </section>
@@ -87,6 +92,18 @@
       <button class="tab" data-tab="account">Account</button>
     </nav>
   </div>
+
+  <div id="onboarding" class="onboarding" hidden>
+    <div class="onboarding-card">
+      <h2>Jukebox に参加</h2>
+      <p class="muted">表示名を入力するか、空白のまま参加できます。</p>
+      <input id="onboarding-name" type="text" maxlength="24" placeholder="ニックネーム（任意）">
+      <button id="onboarding-join" class="btn primary">参加する</button>
+    </div>
+    <div id="service-dock" class="service-dock" hidden></div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
 
   <script src="/js/api.js" type="module"></script>
   <script src="/js/ws.js" type="module"></script>

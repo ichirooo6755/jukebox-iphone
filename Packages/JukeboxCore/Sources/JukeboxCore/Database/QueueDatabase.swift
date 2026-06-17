@@ -151,6 +151,14 @@ public final class QueueDatabase: @unchecked Sendable {
         return first
     }
 
+    public func registerUser(nickname: String) throws -> UserProfile {
+        let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return try createGuestUser()
+        }
+        return try upsertUser(nickname: trimmed)
+    }
+
     public func upsertUser(nickname: String) throws -> UserProfile {
         lock.lock()
         defer { lock.unlock() }
@@ -172,6 +180,40 @@ public final class QueueDatabase: @unchecked Sendable {
             throw DatabaseError.insertFailed
         }
         return UserProfile(id: Int(sqlite3_last_insert_rowid(db)), nickname: trimmed)
+    }
+
+    private func createGuestUser() throws -> UserProfile {
+        lock.lock()
+        defer { lock.unlock() }
+        let nickname = "guest-\(nextGuestNumberLocked())"
+
+        let sql = "INSERT INTO users (nickname) VALUES (?);"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DatabaseError.prepareFailed
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, nickname, -1, SQLITE_TRANSIENT)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw DatabaseError.insertFailed
+        }
+        return UserProfile(id: Int(sqlite3_last_insert_rowid(db)), nickname: nickname)
+    }
+
+    private func nextGuestNumberLocked() -> Int {
+        let sql = "SELECT nickname FROM users WHERE nickname LIKE 'guest-%';"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 1 }
+        defer { sqlite3_finalize(stmt) }
+
+        var maxNumber = 0
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let nickname = String(cString: sqlite3_column_text(stmt, 0))
+            if let suffix = nickname.split(separator: "-").last, let number = Int(suffix) {
+                maxNumber = max(maxNumber, number)
+            }
+        }
+        return maxNumber + 1
     }
 
     public func fetchUser(nickname: String) -> UserProfile? {
@@ -354,7 +396,7 @@ public final class QueueDatabase: @unchecked Sendable {
                 position: Int(sqlite3_column_int(stmt, 1)),
                 title: String(cString: sqlite3_column_text(stmt, 2)),
                 artist: String(cString: sqlite3_column_text(stmt, 3)),
-                artworkURL: artwork,
+                artworkURL: ArtworkURLNormalizer.normalize(artwork),
                 service: MusicService(rawValue: serviceRaw) ?? .appleMusic,
                 musicID: String(cString: sqlite3_column_text(stmt, 6)),
                 duration: Int(sqlite3_column_int(stmt, 7)),

@@ -52,7 +52,7 @@ public struct QueueItem: Codable, Identifiable, Sendable, Equatable {
         self.position = position
         self.title = title
         self.artist = artist
-        self.artworkURL = artworkURL
+        self.artworkURL = ArtworkURLNormalizer.normalize(artworkURL)
         self.service = service
         self.musicID = musicID
         self.duration = duration
@@ -178,10 +178,59 @@ public struct TrackSearchResult: Codable, Identifiable, Sendable {
     ) {
         self.title = title
         self.artist = artist
-        self.artworkURL = artworkURL
+        self.artworkURL = ArtworkURLNormalizer.normalize(artworkURL)
         self.service = service
         self.musicID = musicID
         self.duration = duration
+    }
+}
+
+public struct UnifiedSearchResult: Codable, Identifiable, Sendable {
+    public enum Kind: String, Codable, Sendable {
+        case track
+        case playlist
+        case artist
+    }
+
+    public var id: String
+    public var kind: Kind
+    public var title: String
+    public var subtitle: String
+    public var artworkURL: String?
+    public var service: MusicService
+    public var musicID: String?
+    public var duration: Int?
+    public var trackCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, title, subtitle
+        case artworkURL = "artwork_url"
+        case service
+        case musicID = "music_id"
+        case duration
+        case trackCount = "track_count"
+    }
+
+    public init(
+        id: String,
+        kind: Kind,
+        title: String,
+        subtitle: String,
+        artworkURL: String?,
+        service: MusicService,
+        musicID: String? = nil,
+        duration: Int? = nil,
+        trackCount: Int? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.artworkURL = ArtworkURLNormalizer.normalize(artworkURL)
+        self.service = service
+        self.musicID = musicID
+        self.duration = duration
+        self.trackCount = trackCount
     }
 }
 
@@ -211,7 +260,7 @@ public struct PlaylistSummary: Codable, Identifiable, Sendable {
         self.id = id
         self.title = title
         self.owner = owner
-        self.artworkURL = artworkURL
+        self.artworkURL = ArtworkURLNormalizer.normalize(artworkURL)
         self.service = service
         self.trackCount = trackCount
     }
@@ -244,6 +293,20 @@ public struct ServiceAuthStatus: Codable, Sendable {
         self.isAuthenticated = isAuthenticated
         self.loginURL = loginURL
         self.message = message
+    }
+}
+
+public struct ArtistImportRequest: Codable, Sendable {
+    public var service: MusicService
+    public var artistID: String
+    public var addedBy: String
+    public var limit: Int
+
+    enum CodingKeys: String, CodingKey {
+        case service
+        case artistID = "artist_id"
+        case addedBy = "added_by"
+        case limit
     }
 }
 

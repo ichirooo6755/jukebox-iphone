@@ -71,6 +71,7 @@ public actor JukeboxServer {
     private let webRoot: URL?
     private var server: HTTPServer?
     private var serverTask: Task<Void, Never>?
+    private var bonjourService: NetService?
     private let wsHandler: JukeboxWebSocketHandler
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
@@ -90,6 +91,8 @@ public actor JukeboxServer {
         let http = HTTPServer(port: port)
         server = http
 
+        await http.appendRoute("GET /api/artwork", to: ArtworkProxyHandler())
+
         await http.appendRoute("GET /api/health") { _ in
             HTTPResponse(statusCode: .ok, body: Data("ok".utf8))
         }
@@ -102,16 +105,22 @@ public actor JukeboxServer {
 
         await http.appendRoute("GET /api/auth/status") { [weak self] (request: HTTPRequest) in
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
-            let statuses = await SearchCoordinator.shared.authStatuses(baseURL: self.baseURL(for: request, port: port))
+            let participant = Self.participant(from: request)
+            let statuses = await SearchCoordinator.shared.authStatuses(
+                baseURL: self.baseURL(for: request, port: port),
+                participant: participant
+            )
             return try await self.jsonResponse(statuses)
         }
 
         await http.appendRoute("GET /api/auth/:service/start") { [weak self] (request: HTTPRequest, service: String) in
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let participant = Self.participant(from: request)
             guard let musicService = MusicService(rawValue: service),
                   let url = await SearchCoordinator.shared.beginAuth(
                     service: musicService,
-                    baseURL: self.baseURL(for: request, port: port)
+                    baseURL: self.baseURL(for: request, port: port),
+                    participant: participant
                   ) else {
                 return HTTPResponse(statusCode: .badRequest, body: Data("auth is not configured".utf8))
             }
@@ -137,8 +146,8 @@ public actor JukeboxServer {
             <!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1">
             <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px">
             <h1>\(ok ? "ログイン完了" : "ログイン失敗")</h1>
-            <p>Jukeboxの画面に戻ってください。</p>
-            <script>setTimeout(()=>location.href='/',900)</script>
+            <p>\(ok ? "Jukebox に戻ります…" : "もう一度お試しください。")</p>
+            <script>setTimeout(()=>location.href='/?tab=account&auth=\(service)&ok=\(ok ? "1" : "0")',700)</script>
             </body></html>
             """
             return HTTPResponse(
@@ -208,12 +217,31 @@ public actor JukeboxServer {
             return try await self.jsonResponse(user, status: .created)
         }
 
+        await http.appendRoute("GET /api/search/unified") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let query = request.query.first(where: { $0.name == "q" })?.value ?? ""
+            let serviceRaw = request.query.first(where: { $0.name == "service" })?.value ?? "apple_music"
+            let service = MusicService(rawValue: serviceRaw) ?? .appleMusic
+            let participant = Self.participant(from: request)
+            let results = await SearchCoordinator.shared.unifiedSearch(
+                query: query,
+                service: service,
+                participant: participant
+            )
+            return try await self.jsonResponse(results)
+        }
+
         await http.appendRoute("GET /api/search") { [weak self] (request: HTTPRequest) in
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
             let query = request.query.first(where: { $0.name == "q" })?.value ?? ""
             let serviceRaw = request.query.first(where: { $0.name == "service" })?.value ?? "apple_music"
             let service = MusicService(rawValue: serviceRaw) ?? .appleMusic
-            let results = await SearchCoordinator.shared.search(query: query, service: service)
+            let participant = Self.participant(from: request)
+            let results = await SearchCoordinator.shared.search(
+                query: query,
+                service: service,
+                participant: participant
+            )
             return try await self.jsonResponse(results)
         }
 
@@ -222,7 +250,12 @@ public actor JukeboxServer {
             let query = request.query.first(where: { $0.name == "q" })?.value ?? ""
             let serviceRaw = request.query.first(where: { $0.name == "service" })?.value ?? "apple_music"
             let service = MusicService(rawValue: serviceRaw) ?? .appleMusic
-            let results = await SearchCoordinator.shared.searchPlaylists(query: query, service: service)
+            let participant = Self.participant(from: request)
+            let results = await SearchCoordinator.shared.searchPlaylists(
+                query: query,
+                service: service,
+                participant: participant
+            )
             return try await self.jsonResponse(results)
         }
 
@@ -239,10 +272,25 @@ public actor JukeboxServer {
             return try await self.jsonResponse(added, status: .created)
         }
 
+        await http.appendRoute("POST /api/artists/import") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let importRequest = try self.decoder.decode(ArtistImportRequest.self, from: body)
+            let added = try await self.store.importArtist(
+                service: importRequest.service,
+                artistID: importRequest.artistID,
+                addedBy: importRequest.addedBy,
+                limit: importRequest.limit
+            )
+            return try await self.jsonResponse(added, status: .created)
+        }
+
         await http.appendRoute("GET /ws", to: .webSocket(wsHandler))
 
         if let webRoot {
-            await http.appendRoute("GET /*", to: .directory(subPath: webRoot.path, serverPath: ""))
+            let staticFiles = StaticWebFilesHandler(root: webRoot)
+            await http.appendRoute("GET /", to: staticFiles)
+            await http.appendRoute("GET /*", to: staticFiles)
         }
 
         serverTask = Task {
@@ -254,9 +302,12 @@ public actor JukeboxServer {
         }
 
         try await http.waitUntilListening()
+        publishBonjourService(port: port)
     }
 
     public func stop() async {
+        bonjourService?.stop()
+        bonjourService = nil
         serverTask?.cancel()
         serverTask = nil
         await server?.stop()
@@ -292,6 +343,25 @@ public actor JukeboxServer {
         return "http://\(ip):\(port)"
     }
 
+    private static func participant(from request: HTTPRequest) -> String? {
+        guard let value = request.query.first(where: { $0.name == "participant" })?.value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func publishBonjourService(port: UInt16) {
+        let service = NetService(
+            domain: "local.",
+            type: "_jukebox._tcp.",
+            name: "Jukebox",
+            port: Int32(port)
+        )
+        service.publish()
+        bonjourService = service
+    }
+
     public static func localIPAddress() -> String? {
         var address: String?
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
@@ -322,5 +392,43 @@ public actor JukeboxServer {
             }
         }
         return address
+    }
+}
+
+private struct StaticWebFilesHandler: HTTPHandler {
+    let root: URL
+
+    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        let trimmed = request.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let relativePath = trimmed.isEmpty ? "index.html" : trimmed
+
+        guard !relativePath.contains("..") else {
+            return HTTPResponse(statusCode: .badRequest)
+        }
+
+        let fileURL = root.appendingPathComponent(relativePath)
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory),
+              !isDirectory.boolValue,
+              let data = try? Data(contentsOf: fileURL) else {
+            return HTTPResponse(statusCode: .notFound)
+        }
+
+        var headers = HTTPHeaders()
+        headers[.contentType] = contentType(for: fileURL.pathExtension)
+        return HTTPResponse(statusCode: .ok, headers: headers, body: data)
+    }
+
+    private func contentType(for ext: String) -> String {
+        switch ext.lowercased() {
+        case "html": return "text/html; charset=utf-8"
+        case "css": return "text/css; charset=utf-8"
+        case "js": return "application/javascript; charset=utf-8"
+        case "json": return "application/json; charset=utf-8"
+        case "png": return "image/png"
+        case "svg": return "image/svg+xml"
+        case "ico": return "image/x-icon"
+        default: return "application/octet-stream"
+        }
     }
 }

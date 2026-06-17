@@ -87,7 +87,9 @@ public actor JukeboxStore {
     }
 
     public func addToQueue(_ input: QueueItemInput) async throws -> QueueItem {
-        let item = try database.addItem(input)
+        var normalized = input
+        normalized.artworkURL = ArtworkURLNormalizer.normalize(input.artworkURL)
+        let item = try database.addItem(normalized)
         let queue = database.fetchQueue()
         broadcast(.queueUpdated(queue))
         broadcast(.state(await currentState()))
@@ -102,7 +104,8 @@ public actor JukeboxStore {
         let tracks = await SearchCoordinator.shared.playlistTracks(
             service: service,
             playlistID: playlistID,
-            limit: min(max(limit, 1), 100)
+            limit: min(max(limit, 1), 100),
+            participant: service == .youtube ? addedBy : nil
         )
 
         var added: [QueueItem] = []
@@ -179,7 +182,43 @@ public actor JukeboxStore {
     }
 
     public func registerUser(nickname: String) async throws -> UserProfile {
-        try database.upsertUser(nickname: nickname)
+        try database.registerUser(nickname: nickname)
+    }
+
+    public func importArtist(
+        service: MusicService,
+        artistID: String,
+        addedBy: String,
+        limit: Int
+    ) async throws -> [QueueItem] {
+        let tracks = await SearchCoordinator.shared.artistTopTracks(
+            service: service,
+            artistID: artistID,
+            limit: min(max(limit, 1), 20)
+        )
+
+        var added: [QueueItem] = []
+        for track in tracks {
+            let item = try database.addItem(QueueItemInput(
+                title: track.title,
+                artist: track.artist,
+                artworkURL: track.artworkURL,
+                service: track.service,
+                musicID: track.musicID,
+                duration: track.duration,
+                addedBy: addedBy
+            ))
+            added.append(item)
+        }
+
+        let queue = database.fetchQueue()
+        broadcast(.queueUpdated(queue))
+        broadcast(.state(await currentState()))
+
+        if nowPlaying == nil, !added.isEmpty {
+            try await playNext()
+        }
+        return added
     }
 
     public func playNext() async throws {

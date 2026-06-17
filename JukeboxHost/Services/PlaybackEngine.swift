@@ -1,14 +1,24 @@
 import Foundation
 import JukeboxCore
-import MediaPlayer
 import MusicKit
-import UIKit
 import WebKit
+
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 @MainActor
 final class PlaybackEngine: PlaybackControlling {
     private let musicPlayer = ApplicationMusicPlayer.shared
     private var youtubeWebView: WKWebView?
+    #if os(iOS)
+    private var youtubeWindow: UIWindow?
+    #endif
+    #if os(macOS)
+    private var youtubeWindow: NSWindow?
+    #endif
     private var trackFinishedTask: Task<Void, Never>?
     private(set) var elapsed: Double = 0
     private(set) var isPlaying = false
@@ -43,6 +53,14 @@ final class PlaybackEngine: PlaybackControlling {
         switch item.service {
         case .appleMusic:
             youtubeWebView = nil
+            #if os(iOS)
+            youtubeWindow?.isHidden = true
+            youtubeWindow = nil
+            #endif
+            #if os(macOS)
+            youtubeWindow?.close()
+            youtubeWindow = nil
+            #endif
             try await playAppleMusic(item: item)
             observeAppleMusicProgress()
         case .spotify:
@@ -77,9 +95,18 @@ final class PlaybackEngine: PlaybackControlling {
     }
 
     private func playAppleMusic(item: QueueItem) async throws {
-        let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(item.musicID))
-        let response = try await request.response()
-        guard let song = response.items.first else {
+        let catalogRequest = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(item.musicID))
+        let catalogResponse = try? await catalogRequest.response()
+        if let song = catalogResponse?.items.first {
+            musicPlayer.queue = ApplicationMusicPlayer.Queue(for: [song], startingAt: song)
+            try await musicPlayer.play()
+            return
+        }
+
+        var libraryRequest = MusicLibraryRequest<Song>()
+        libraryRequest.filter(matching: \.id, equalTo: MusicItemID(item.musicID))
+        let libraryResponse = try await libraryRequest.response()
+        guard let song = libraryResponse.items.first else {
             throw PlaybackError.trackNotFound
         }
         musicPlayer.queue = ApplicationMusicPlayer.Queue(for: [song], startingAt: song)
@@ -91,7 +118,7 @@ final class PlaybackEngine: PlaybackControlling {
         guard let url = URL(string: spotifyURI) else {
             throw PlaybackError.unsupported
         }
-        await UIApplication.shared.open(url)
+        PlatformOpenURL.open(url)
         observeTimedProgress(duration: max(item.duration, 180))
     }
 
@@ -124,6 +151,38 @@ final class PlaybackEngine: PlaybackControlling {
         let webView = WKWebView(frame: .zero, configuration: config)
         youtubeWebView = webView
         webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube.com"))
+
+        #if os(iOS)
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else {
+            throw PlaybackError.unsupported
+        }
+        let viewController = UIViewController()
+        viewController.view = webView
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        window.rootViewController = viewController
+        window.windowLevel = .normal
+        window.alpha = 0.01
+        window.isHidden = false
+        youtubeWindow = window
+        #endif
+
+        #if os(macOS)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = webView
+        window.isOpaque = false
+        window.alphaValue = 0.01
+        window.level = .normal
+        window.orderBack(nil)
+        youtubeWindow = window
+        #endif
     }
 
     private func observeAppleMusicProgress() {
