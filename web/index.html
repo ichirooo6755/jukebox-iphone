@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>Jukebox</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <h1>Jukebox</h1>
+      <span id="connection-status" class="badge offline">未接続</span>
+    </header>
+
+    <main id="views">
+      <section id="view-home" class="view active">
+        <div class="now-playing-card">
+          <img id="np-artwork" class="artwork" src="" alt="" hidden>
+          <div id="np-artwork-placeholder" class="artwork placeholder">♪</div>
+          <div class="np-info">
+            <p id="np-service" class="service-badge">—</p>
+            <h2 id="np-title">接続中...</h2>
+            <p id="np-artist" class="muted">ホストに接続してください</p>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div id="np-progress" class="progress-fill"></div></div>
+              <div class="progress-times">
+                <span id="np-elapsed">0:00</span>
+                <span id="np-duration">0:00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-search" class="view">
+        <div class="search-bar">
+          <input id="search-input" type="search" placeholder="曲名・アーティストを検索" autocomplete="off">
+          <select id="search-service">
+            <option value="apple_music">Apple Music</option>
+            <option value="spotify">Spotify</option>
+            <option value="youtube">YouTube</option>
+          </select>
+        </div>
+        <ul id="search-results" class="result-list"></ul>
+      </section>
+
+      <section id="view-queue" class="view">
+        <p class="hint">ドラッグで並び替え · スワイプで削除</p>
+        <ul id="queue-list" class="queue-list"></ul>
+      </section>
+
+      <section id="view-account" class="view">
+        <div class="account-card">
+          <label for="nickname">ニックネーム</label>
+          <input id="nickname" type="text" maxlength="24" placeholder="表示名">
+          <button id="save-nickname" class="btn primary">保存</button>
+          <p id="account-status" class="muted"></p>
+        </div>
+        <div class="account-card">
+          <label for="host-url">ホスト URL</label>
+          <input id="host-url" type="url" placeholder="http://192.168.1.10:8765">
+          <button id="connect-host" class="btn">接続</button>
+        </div>
+        <div class="account-card services">
+          <h3>サービス</h3>
+          <ul>
+            <li>Apple Music — ホスト経由で検索・再生</li>
+            <li>Spotify — 検索（要クライアントID設定）</li>
+            <li>YouTube — 検索（要APIキー設定）</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="home">Home</button>
+      <button class="tab" data-tab="search">Search</button>
+      <button class="tab" data-tab="queue">Queue</button>
+      <button class="tab" data-tab="account">Account</button>
+    </nav>
+  </div>
+
+  <script src="/js/api.js" type="module"></script>
+  <script src="/js/ws.js" type="module"></script>
+  <script src="/js/app.js" type="module"></script>
+</body>
+</html>

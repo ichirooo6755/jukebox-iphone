@@ -1,0 +1,11 @@
+{
+  "name": "Jukebox",
+  "short_name": "Jukebox",
+  "description": "民主的マルチストリーミング・ジュークボックス",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait",
+  "lang": "ja"
+}

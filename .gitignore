@@ -1,0 +1,23 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+
+# Swift
+.swiftpm/
+.build/
+Package.resolved
+
+# Secrets
+.env
+Secrets.plist
+Config.xcconfig
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

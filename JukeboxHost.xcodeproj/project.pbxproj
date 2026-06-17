@@ -1,0 +1,400 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
+		16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3A24E9219C55EB44606CBD /* HostSetupView.swift */; };
+		2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */; };
+		34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */; };
+		4CB8DB35003C6DEB85EE25D5 /* DisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */; };
+		715668ACD5BF1B7E25676762 /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = BF9CD71DF3BDE171CF411004 /* JukeboxCore */; };
+		9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
+		D670EE25485941A43CB5ED6B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
+		DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05EBA0EAD856983B956699A /* AppModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxHostApp.swift; sourceTree = "<group>"; };
+		1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		239A6B2C23B09546B42A0AB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		32332384D447815DC97A42C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		37A4B91373407D416ADD043C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		4544CC765927F57F23C43B73 /* JukeboxHost.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JukeboxHost.entitlements; sourceTree = "<group>"; };
+		6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayView.swift; sourceTree = "<group>"; };
+		7C3A24E9219C55EB44606CBD /* HostSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSetupView.swift; sourceTree = "<group>"; };
+		A0BBCB3191CC98BFFD48F0F9 /* JukeboxCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JukeboxCore; path = Packages/JukeboxCore; sourceTree = SOURCE_ROOT; };
+		D05EBA0EAD856983B956699A /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicSearchService.swift; sourceTree = "<group>"; };
+		EACDA7E41AB4C133F7A4ACBD /* JukeboxHost.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JukeboxHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ACDA71C619F05C2A51CB7468 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				715668ACD5BF1B7E25676762 /* JukeboxCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1E3A04A77FCB236B5E1C934F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */,
+				D05EBA0EAD856983B956699A /* AppModel.swift */,
+				1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		2D898FABB8D01F9214641E70 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				A0BBCB3191CC98BFFD48F0F9 /* JukeboxCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		6A39CC1571C3D1355F23DD85 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EACDA7E41AB4C133F7A4ACBD /* JukeboxHost.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7432A100B1C6A6149E927481 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				32332384D447815DC97A42C9 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D1D1C026258D8D79A0F8C23E = {
+			isa = PBXGroup;
+			children = (
+				F092F85025A1A8F660C2AE09 /* JukeboxHost */,
+				2D898FABB8D01F9214641E70 /* Packages */,
+				6A39CC1571C3D1355F23DD85 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F092F85025A1A8F660C2AE09 /* JukeboxHost */ = {
+			isa = PBXGroup;
+			children = (
+				239A6B2C23B09546B42A0AB5 /* Info.plist */,
+				4544CC765927F57F23C43B73 /* JukeboxHost.entitlements */,
+				1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */,
+				7432A100B1C6A6149E927481 /* Resources */,
+				1E3A04A77FCB236B5E1C934F /* Services */,
+				F5BD8759E9F50C70C502F66C /* Views */,
+			);
+			path = JukeboxHost;
+			sourceTree = "<group>";
+		};
+		F5BD8759E9F50C70C502F66C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */,
+				7C3A24E9219C55EB44606CBD /* HostSetupView.swift */,
+				37A4B91373407D416ADD043C /* RootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		83B574741B3BB58816824770 /* JukeboxHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D87CADF352C3AC9BE08A47C9 /* Build configuration list for PBXNativeTarget "JukeboxHost" */;
+			buildPhases = (
+				4937E3D91C91DAB03DFD1BF6 /* Sources */,
+				C5D92C9DB98C56A9C8B93183 /* Resources */,
+				ACDA71C619F05C2A51CB7468 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JukeboxHost;
+			packageProductDependencies = (
+				BF9CD71DF3BDE171CF411004 /* JukeboxCore */,
+			);
+			productName = JukeboxHost;
+			productReference = EACDA7E41AB4C133F7A4ACBD /* JukeboxHost.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3568A1E0CC9F7F6D7DA3CBC7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					83B574741B3BB58816824770 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 078808E600E94D529D64A542 /* Build configuration list for PBXProject "JukeboxHost" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D1D1C026258D8D79A0F8C23E;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				19FE333F900344E79DEB2616 /* XCLocalSwiftPackageReference "Packages/JukeboxCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				83B574741B3BB58816824770 /* JukeboxHost */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C5D92C9DB98C56A9C8B93183 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D670EE25485941A43CB5ED6B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4937E3D91C91DAB03DFD1BF6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */,
+				2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */,
+				4CB8DB35003C6DEB85EE25D5 /* DisplayView.swift in Sources */,
+				16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */,
+				1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */,
+				34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */,
+				9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		539B469F44033F7D7A2440ED /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JukeboxHost/JukeboxHost.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = JukeboxHost/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jukebox.host;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		5E02D2CB0ED03A8D36791623 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JukeboxHost/JukeboxHost.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = JukeboxHost/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.jukebox.host;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		78FCAC950A5FE2BEF391AB2C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		E67C5CCDC0382FCA3E31C6CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		078808E600E94D529D64A542 /* Build configuration list for PBXProject "JukeboxHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				78FCAC950A5FE2BEF391AB2C /* Debug */,
+				E67C5CCDC0382FCA3E31C6CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D87CADF352C3AC9BE08A47C9 /* Build configuration list for PBXNativeTarget "JukeboxHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E02D2CB0ED03A8D36791623 /* Debug */,
+				539B469F44033F7D7A2440ED /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		19FE333F900344E79DEB2616 /* XCLocalSwiftPackageReference "Packages/JukeboxCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/JukeboxCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BF9CD71DF3BDE171CF411004 /* JukeboxCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JukeboxCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 3568A1E0CC9F7F6D7DA3CBC7 /* Project object */;
+}
