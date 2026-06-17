@@ -64,10 +64,10 @@ open JukeboxHost.xcodeproj
 
 ```
 ホスト QR スキャン
-  → ローカル PWA（http://<IP>:8765/?join=1）
-  → 名前入力 → サービス連携（任意）
-  → Spotify/YouTube ログイン時のみ一瞬 Netlify（OAuth 中継・画面は見えない）
-  → 自動でローカル PWA の参加画面に復帰（2回目の QR 不要）
+  → ローカル PWA（http://<IP>:8765）
+  → 名前入力 → 参加する
+  → Spotify / YouTube は Account タブからログイン（1回だけ）
+  → OAuth 完了後は Account タブに自動復帰
 ```
 
 Netlify は**参加ランディングではなく** OAuth コールバック専用です。参加者が Netlify の URL を開く必要はありません。

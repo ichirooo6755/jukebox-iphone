@@ -147,8 +147,8 @@ public actor JukeboxServer {
             )
             let payload = OAuthStatePayload.decode(state)
             let returnBase = payload?.host ?? baseURL
-            let onboardQuery = payload?.returnTo == "onboard" ? "onboard=1&" : ""
-            let redirectURL = "\(returnBase)/?\(onboardQuery)auth=\(service)&ok=\(ok ? "1" : "0")"
+            let tabQuery = payload?.returnTo == "account" ? "tab=account&" : ""
+            let redirectURL = "\(returnBase)/?\(tabQuery)auth=\(service)&ok=\(ok ? "1" : "0")"
             let html = """
             <!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1">
             <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px;text-align:center">

@@ -330,9 +330,6 @@ function setupAccount() {
     }
   });
 
-  if (isOnboarded()) {
-    refreshAuthStatus();
-  }
 }
 
 function setupSearch() {
@@ -419,10 +416,18 @@ function setupOnboarding() {
 
   const authService = params.get('auth');
   const authOk = params.get('ok') === '1';
-  cleanQueryParams('onboard', 'auth', 'ok', 'join');
+  cleanQueryParams('onboard', 'auth', 'ok', 'join', 'tab');
 
-  if (authService && authOk) {
-    showToast(`${serviceLabel(authService)} にログインしました`);
+  if (authService) {
+    setOnboarded();
+    hideOnboardingOverlay();
+    showToast(
+      authOk
+        ? `${serviceLabel(authService)} にログインしました`
+        : `${serviceLabel(authService)} のログインに失敗しました`
+    );
+    activateTab('account');
+    return;
   }
 
   if (isOnboarded()) {
@@ -460,6 +465,17 @@ function setupOnboarding() {
     if (event.key === 'Enter') join();
   });
 }
+function activateTab(tabName) {
+  const target = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  target?.click();
+}
+
+function authLoginURL(loginURL) {
+  const url = new URL(loginURL, getBaseURL());
+  url.searchParams.set('return', 'account');
+  return url.href;
+}
+
 function renderAuthAction(status) {
   if (status.is_authenticated) {
     return '<span class="auth-pill ok">OK</span>';
@@ -470,7 +486,7 @@ function renderAuthAction(status) {
   if (!status.login_url) {
     return '<span class="auth-pill warn">要設定</span>';
   }
-  return `<a class="btn auth-login" href="${status.login_url}" target="_self">ログイン</a>`;
+  return `<a class="btn auth-login" href="${escapeHtml(authLoginURL(status.login_url))}" target="_self">ログイン</a>`;
 }
 
 async function refreshAuthStatus() {
@@ -530,10 +546,9 @@ async function bootstrap() {
   setupOnboarding();
 
   const params = new URLSearchParams(window.location.search);
-  const tab = params.get('tab');
+  const tab = params.get('tab') || (params.get('auth') ? 'account' : null);
   if (tab) {
-    const target = document.querySelector(`.tab[data-tab="${tab}"]`);
-    target?.click();
+    activateTab(tab);
     cleanQueryParams('tab');
   }
 

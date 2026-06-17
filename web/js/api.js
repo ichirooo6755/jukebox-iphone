@@ -1,7 +1,6 @@
 const STORAGE_HOST = 'jukebox_host_url';
 const STORAGE_NICKNAME = 'jukebox_nickname';
 const STORAGE_ONBOARDED = 'jukebox_onboarded';
-const STORAGE_SKIPPED_SERVICES = 'jukebox_skipped_services';
 
 let baseURL = localStorage.getItem(STORAGE_HOST) || window.location.origin;
 
@@ -28,20 +27,6 @@ export function isOnboarded() {
 
 export function setOnboarded() {
   localStorage.setItem(STORAGE_ONBOARDED, '1');
-}
-
-export function getSkippedServices() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_SKIPPED_SERVICES) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-export function skipService(service) {
-  const skipped = new Set(getSkippedServices());
-  skipped.add(service);
-  localStorage.setItem(STORAGE_SKIPPED_SERVICES, JSON.stringify([...skipped]));
 }
 
 export function normalizeArtworkURL(url) {

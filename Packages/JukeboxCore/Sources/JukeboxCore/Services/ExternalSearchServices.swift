@@ -394,16 +394,20 @@ public actor YouTubeSearchService {
         ).encoded()
         let redirectURI = OAuthRedirectHelper.redirectURI(baseURL: baseURL, service: .youtube)
 
-        var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
-        components.queryItems = [
+        let persisted = tokenStore.load(participant: participant)
+        var queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: "https://www.googleapis.com/auth/youtube.readonly"),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent"),
             URLQueryItem(name: "state", value: state)
         ]
+        if persisted.refreshToken == nil {
+            queryItems.append(URLQueryItem(name: "prompt", value: "consent"))
+        }
+        var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
+        components.queryItems = queryItems
         return components.url
     }
 
