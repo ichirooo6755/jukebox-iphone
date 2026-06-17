@@ -106,6 +106,14 @@ struct HostSetupView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     .listRowBackground(Color.clear)
 
+                    if model.isServerRunning {
+                        NavigationLink {
+                            HostDurabilitySheet()
+                        } label: {
+                            Label("耐久・メトリクス", systemImage: "waveform.path.ecg")
+                        }
+                    }
+
                     if let error = model.errorMessage {
                         Text(error)
                             .font(.caption)

@@ -1,6 +1,7 @@
 import {
   api,
   artworkSrc,
+  discoverHosts,
   ensureParticipant,
   getBaseURL,
   getNickname,
@@ -52,6 +53,9 @@ const els = {
   queueList: document.getElementById('queue-list'),
   nickname: document.getElementById('nickname'),
   hostUrl: document.getElementById('host-url'),
+  discoverHostsBtn: document.getElementById('discover-hosts'),
+  discoveredHosts: document.getElementById('discovered-hosts'),
+  syncMetrics: document.getElementById('sync-metrics'),
   accountStatus: document.getElementById('account-status'),
   authStatusList: document.getElementById('auth-status-list'),
   onboarding: document.getElementById('onboarding'),
@@ -427,6 +431,9 @@ function setupTabs() {
       document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById(`view-${tab.dataset.tab}`).classList.add('active');
+      if (tab.dataset.tab === 'account') {
+        refreshSyncMetrics();
+      }
     });
   });
 }
@@ -456,11 +463,67 @@ function setupAccount() {
     try {
       await api.state();
       els.accountStatus.textContent = '接続しました';
+      await refreshSyncMetrics();
     } catch (err) {
       els.accountStatus.textContent = `接続失敗: ${err.message}`;
     }
   });
 
+  els.discoverHostsBtn?.addEventListener('click', async () => {
+    els.discoverHostsBtn.disabled = true;
+    els.discoverHostsBtn.textContent = '探索中…';
+    try {
+      const hosts = await discoverHosts();
+      if (!hosts.length) {
+        els.accountStatus.textContent = 'ホストが見つかりませんでした。QR または IP を入力してください。';
+        els.discoveredHosts.innerHTML = '';
+        return;
+      }
+      els.discoveredHosts.innerHTML = hosts.map((host) => `
+        <li>
+          <button type="button" class="btn discovered-host" data-url="${escapeHtml(host.url)}">
+            ${escapeHtml(host.name)} · ${escapeHtml(host.url)}
+          </button>
+        </li>
+      `).join('');
+      els.discoveredHosts.querySelectorAll('.discovered-host').forEach((button) => {
+        button.addEventListener('click', async () => {
+          els.hostUrl.value = button.dataset.url;
+          setBaseURL(button.dataset.url);
+          connect();
+          try {
+            await api.state();
+            els.accountStatus.textContent = `${button.dataset.url} に接続しました`;
+            await refreshSyncMetrics();
+          } catch (err) {
+            els.accountStatus.textContent = `接続失敗: ${err.message}`;
+          }
+        });
+      });
+      els.accountStatus.textContent = `${hosts.length} 件のホストが見つかりました`;
+    } finally {
+      els.discoverHostsBtn.disabled = false;
+      els.discoverHostsBtn.textContent = 'ホストを探す';
+    }
+  });
+
+}
+
+async function refreshSyncMetrics() {
+  if (!els.syncMetrics) return;
+  try {
+    const started = performance.now();
+    await api.state();
+    const roundTrip = Math.round(performance.now() - started);
+    const metrics = await api.metrics();
+    const broadcast = metrics.last_broadcast_ms_ago != null
+      ? `${Math.round(metrics.last_broadcast_ms_ago)}ms 前`
+      : '—';
+    els.syncMetrics.textContent =
+      `同期: 往復 ${roundTrip}ms · 配信 ${broadcast} · 接続 ${metrics.connected_clients} 人`;
+  } catch {
+    els.syncMetrics.textContent = '';
+  }
 }
 
 function setupSearch() {
@@ -735,6 +798,7 @@ async function bootstrap() {
   }
 
   connect();
+  await refreshSyncMetrics();
 }
 
 bootstrap();

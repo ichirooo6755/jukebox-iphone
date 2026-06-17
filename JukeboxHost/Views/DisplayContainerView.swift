@@ -35,6 +35,7 @@ struct HostNetworkBanner: View {
 struct DisplayContainerView: View {
     @EnvironmentObject private var model: AppModel
     @State private var showParticipantQR = false
+    @State private var showDurability = false
     @State private var didPresentInitialQR = false
 
     var body: some View {
@@ -70,6 +71,9 @@ struct DisplayContainerView: View {
             if let url = model.participantURL {
                 ParticipantQRCodeSheet(url: url)
             }
+        }
+        .sheet(isPresented: $showDurability) {
+            HostDurabilitySheet()
         }
         .onAppear {
             guard !didPresentInitialQR, model.participantURL != nil else { return }
@@ -119,6 +123,12 @@ struct DisplayContainerView: View {
                     "\(status.service.displayName): \(status.isAuthenticated ? "ログイン済み" : "未ログイン")",
                     systemImage: status.isAuthenticated ? "checkmark.circle" : "exclamationmark.circle"
                 )
+            }
+            Divider()
+            Button {
+                showDurability = true
+            } label: {
+                Label("耐久・メトリクス", systemImage: "waveform.path.ecg")
             }
             Divider()
             ForEach(HostDisplayMode.allCases) { mode in

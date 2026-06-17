@@ -84,7 +84,12 @@
         <div class="account-card">
           <label for="host-url">ホスト URL</label>
           <input id="host-url" type="url" placeholder="http://192.168.1.10:8765">
+          <div class="host-discover-row">
+            <button id="discover-hosts" type="button" class="btn">ホストを探す</button>
+          </div>
+          <ul id="discovered-hosts" class="discovered-hosts"></ul>
           <button id="connect-host" class="btn">接続</button>
+          <p id="sync-metrics" class="muted metrics-line"></p>
         </div>
         <div class="account-card services">
           <h3>サービス</h3>

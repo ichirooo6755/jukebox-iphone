@@ -114,12 +114,31 @@ final class GuestAPIClient: ObservableObject {
         await refreshState()
     }
 
-    func authURL(_ loginPath: String) -> URL? {
+    func authURL(_ loginPath: String, returnTo: String = "guest") -> URL? {
         let trimmed = loginPath.hasPrefix("http") ? loginPath : "\(baseURL)\(loginPath)"
         guard var components = URLComponents(string: trimmed) else { return nil }
         var items = components.queryItems ?? []
-        items.append(URLQueryItem(name: "return", value: "account"))
+        items.append(URLQueryItem(name: "return", value: returnTo))
         components.queryItems = items
         return components.url
+    }
+
+    func login(service: MusicService) async {
+        guard let status = authStatuses.first(where: { $0.service == service }),
+              let loginURL = status.loginURL,
+              let url = authURL(loginURL) else {
+            errorMessage = "ログイン URL を取得できません"
+            return
+        }
+        do {
+            let ok = try await GuestOAuthSession.shared.start(loginURL: url)
+            if ok {
+                await refreshAuth()
+            } else {
+                errorMessage = "\(service.displayName) のログインに失敗しました"
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

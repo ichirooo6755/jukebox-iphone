@@ -68,7 +68,7 @@ final class PlaybackEngine: PlaybackControlling {
             observeTimedProgress(duration: item.duration)
         case .youtube:
             try await playYouTube(item: item)
-            observeTimedProgress(duration: max(item.duration, 180))
+            observeYouTubeWatchdog(duration: max(item.duration, 180))
         }
     }
 
@@ -130,24 +130,54 @@ final class PlaybackEngine: PlaybackControlling {
         <script src="https://www.youtube.com/iframe_api"></script>
         <script>
         var player;
+        var progressTimer;
+        function postProgress() {
+          if (!player || !player.getCurrentTime) return;
+          window.webkit.messageHandlers.trackProgress.postMessage(String(player.getCurrentTime()));
+        }
         function onYouTubeIframeAPIReady() {
           player = new YT.Player('player', {
             height: '1', width: '1', videoId: '\(item.musicID)',
-            playerVars: { autoplay: 1, playsinline: 1 },
-            events: { 'onStateChange': function(e) {
-              if (e.data === YT.PlayerState.ENDED) {
-                window.webkit.messageHandlers.trackEnded.postMessage('ended');
+            playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },
+            events: {
+              'onReady': function() {
+                player.playVideo();
+                progressTimer = setInterval(postProgress, 1000);
+              },
+              'onStateChange': function(e) {
+                if (e.data === YT.PlayerState.ENDED) {
+                  clearInterval(progressTimer);
+                  window.webkit.messageHandlers.trackEnded.postMessage('ended');
+                }
+                if (e.data === YT.PlayerState.PLAYING) postProgress();
+              },
+              'onError': function() {
+                window.webkit.messageHandlers.trackError.postMessage('error');
               }
-            }}
+            }
           });
         }
         </script></body></html>
         """
         let config = WKWebViewConfiguration()
-        let handler = YouTubeMessageHandler { [weak self] in
+        let endedHandler = YouTubeMessageHandler { [weak self] in
             Task { @MainActor in self?.onTrackFinished?() }
         }
-        config.userContentController.add(handler, name: "trackEnded")
+        let progressHandler = YouTubeProgressHandler { [weak self] seconds in
+            Task { @MainActor in
+                self?.elapsed = seconds
+                self?.emitVisualizerLevels()
+            }
+        }
+        let errorHandler = YouTubeMessageHandler { [weak self] in
+            Task { @MainActor in
+                guard let self, self.currentItem?.musicID == item.musicID else { return }
+                self.onTrackFinished?()
+            }
+        }
+        config.userContentController.add(endedHandler, name: "trackEnded")
+        config.userContentController.add(progressHandler, name: "trackProgress")
+        config.userContentController.add(errorHandler, name: "trackError")
         let webView = WKWebView(frame: .zero, configuration: config)
         youtubeWebView = webView
         webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube.com"))
@@ -204,6 +234,17 @@ final class PlaybackEngine: PlaybackControlling {
         }
     }
 
+    private func observeYouTubeWatchdog(duration: Int) {
+        trackFinishedTask?.cancel()
+        trackFinishedTask = Task {
+            let total = Double(duration)
+            try? await Task.sleep(nanoseconds: UInt64(total + 30) * 1_000_000_000)
+            if !Task.isCancelled, isPlaying, currentItem?.service == .youtube {
+                onTrackFinished?()
+            }
+        }
+    }
+
     private func observeTimedProgress(duration: Int) {
         trackFinishedTask?.cancel()
         trackFinishedTask = Task {
@@ -234,10 +275,20 @@ final class PlaybackEngine: PlaybackControlling {
 }
 
 private final class YouTubeMessageHandler: NSObject, WKScriptMessageHandler {
-    private let onEnded: () -> Void
-    init(onEnded: @escaping () -> Void) { self.onEnded = onEnded }
+    private let onMessage: () -> Void
+    init(onMessage: @escaping () -> Void) { self.onMessage = onMessage }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        onEnded()
+        onMessage()
+    }
+}
+
+private final class YouTubeProgressHandler: NSObject, WKScriptMessageHandler {
+    private let onProgress: (Double) -> Void
+    init(onProgress: @escaping (Double) -> Void) { self.onProgress = onProgress }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if let text = message.body as? String, let value = Double(text) {
+            onProgress(value)
+        }
     }
 }
 

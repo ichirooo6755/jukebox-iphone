@@ -52,6 +52,7 @@ public final class JukeboxWebSocketHandler: WSMessageHandler, @unchecked Sendabl
     private func broadcast(_ event: JukeboxEvent) {
         guard let data = try? encoder.encode(event),
               let text = String(data: data, encoding: .utf8) else { return }
+        Task { await ServerMetrics.shared.recordBroadcast() }
         queue.sync {
             for continuation in outboundContinuations.values {
                 continuation.yield(.text(text))
@@ -95,6 +96,45 @@ public actor JukeboxServer {
 
         await http.appendRoute("GET /api/health") { _ in
             HTTPResponse(statusCode: .ok, body: Data("ok".utf8))
+        }
+
+        await http.appendRoute("GET /api/discover") { [weak self] _ in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let ip = Self.localIPAddress() ?? "127.0.0.1"
+            let info = HostDiscoverInfo(
+                name: "Jukebox",
+                bonjourType: "_jukebox._tcp",
+                hostname: "Jukebox.local",
+                port: Int(port),
+                url: "http://\(ip):\(port)"
+            )
+            return try await self.jsonResponse(info)
+        }
+
+        await http.appendRoute("GET /api/metrics") { [weak self] _ in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let snapshot = await ServerMetrics.shared.snapshot(connectedClients: self.clientCount)
+            return try await self.jsonResponse(snapshot)
+        }
+
+        await http.appendRoute("GET /api/durability/events") { _ in
+            try await self.jsonResponse(DurabilityLog.load())
+        }
+
+        await http.appendRoute("POST /api/durability/self-test") { [weak self] _ in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let result = await self.runDurabilitySelfTest(port: port)
+            DurabilityLog.record(
+                result.passed
+                    ? "self_test_pass latency=\(Int(result.stateLatencyMs))ms"
+                    : "self_test_fail \(result.message)"
+            )
+            return try await self.jsonResponse(result)
+        }
+
+        await http.appendRoute("DELETE /api/durability/events") { _ in
+            DurabilityLog.clear()
+            return HTTPResponse(statusCode: .noContent)
         }
 
         await http.appendRoute("GET /api/status") { [weak self] _ in
@@ -147,8 +187,13 @@ public actor JukeboxServer {
             )
             let payload = OAuthStatePayload.decode(state)
             let returnBase = payload?.host ?? baseURL
-            let tabQuery = payload?.returnTo == "account" ? "tab=account&" : ""
-            let redirectURL = "\(returnBase)/?\(tabQuery)auth=\(service)&ok=\(ok ? "1" : "0")"
+            let redirectURL: String
+            if payload?.returnTo == "guest" {
+                redirectURL = "jukeboxguest://oauth?service=\(service)&ok=\(ok ? "1" : "0")"
+            } else {
+                let tabQuery = payload?.returnTo == "account" ? "tab=account&" : ""
+                redirectURL = "\(returnBase)/?\(tabQuery)auth=\(service)&ok=\(ok ? "1" : "0")"
+            }
             let html = """
             <!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1">
             <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px;text-align:center">
@@ -465,6 +510,42 @@ public actor JukeboxServer {
             }
         }
         return false
+    }
+
+    private func runDurabilitySelfTest(port: UInt16) async -> DurabilitySelfTestResult {
+        let ip = Self.localIPAddress() ?? "127.0.0.1"
+        let base = "http://\(ip):\(port)"
+        var healthOK = false
+        if let url = URL(string: "\(base)/api/health") {
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 3
+            if let (data, response) = try? await URLSession.shared.data(for: request),
+               let http = response as? HTTPURLResponse,
+               http.statusCode == 200,
+               String(data: data, encoding: .utf8) == "ok" {
+                healthOK = true
+            }
+        }
+
+        var stateLatencyMs: Double = 0
+        if let url = URL(string: "\(base)/api/state") {
+            let started = Date()
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 3
+            _ = try? await URLSession.shared.data(for: request)
+            stateLatencyMs = Date().timeIntervalSince(started) * 1000
+        }
+
+        let passed = healthOK && stateLatencyMs < 1_000
+        return DurabilitySelfTestResult(
+            passed: passed,
+            healthOK: healthOK,
+            stateLatencyMs: stateLatencyMs,
+            websocketLatencyMs: nil,
+            message: passed
+                ? "ヘルスチェックと状態取得が正常です（\(Int(stateLatencyMs))ms）"
+                : "セルフテストに失敗しました"
+        )
     }
 }
 

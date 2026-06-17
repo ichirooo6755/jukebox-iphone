@@ -139,11 +139,52 @@ export const api = {
     body: JSON.stringify({ service, artist_id: artistID, added_by: addedBy, limit }),
   }),
   authStatus: (participant = getNickname()) => request(withParticipant('/api/auth/status', participant)),
+  discover: () => request('/api/discover'),
+  discoverAt: async (baseURL) => {
+    const base = baseURL.replace(/\/$/, '');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const res = await fetch(`${base}/api/discover`, { signal: controller.signal });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+  metrics: () => request('/api/metrics'),
+  durabilityEvents: () => request('/api/durability/events'),
+  runDurabilitySelfTest: () => request('/api/durability/self-test', { method: 'POST' }),
   registerUser: (nickname) => request('/api/users', { method: 'POST', body: JSON.stringify({ nickname }) }),
   voteSkip: (nickname) => request('/api/playback/vote-skip', { method: 'POST', body: JSON.stringify({ nickname }) }),
   togglePlayback: () => request('/api/playback/toggle', { method: 'POST' }),
   skipTrack: () => request('/api/playback/skip', { method: 'POST' }),
 };
+
+export async function discoverHosts() {
+  const port = 8765;
+  const candidates = new Set([
+    getBaseURL(),
+    `http://Jukebox.local:${port}`,
+    `http://jukebox.local:${port}`,
+    `${window.location.protocol}//${window.location.hostname}:${port}`,
+  ]);
+  const found = [];
+  await Promise.all([...candidates].map(async (base) => {
+    const info = await api.discoverAt(base);
+    if (info?.url) found.push(info);
+  }));
+  const unique = [];
+  const seen = new Set();
+  for (const item of found) {
+    if (seen.has(item.url)) continue;
+    seen.add(item.url);
+    unique.push(item);
+  }
+  return unique;
+}
 
 export async function ensureParticipant() {
   if (getNickname()) {

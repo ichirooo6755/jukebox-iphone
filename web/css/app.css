@@ -598,6 +598,29 @@ input, select {
   min-width: 0;
 }
 
+.host-discover-row {
+  margin-top: 8px;
+}
+
+.discovered-hosts {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.discovered-hosts .btn {
+  width: 100%;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.metrics-line {
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
 .graph-lanes {
   display: grid;
   grid-auto-flow: column;

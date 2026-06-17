@@ -52,6 +52,7 @@ public actor JukeboxStore {
     }
 
     private func broadcast(_ event: JukeboxEvent) {
+        Task { await ServerMetrics.shared.recordBroadcast() }
         for handler in listeners.values {
             handler(event)
         }

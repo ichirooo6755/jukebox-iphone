@@ -47,14 +47,25 @@
 
 | # | 内容 | 状態 | メモ |
 |---|------|------|------|
-| 24 | ゲスト側ネイティブアプリ | ✅ | `JukeboxGuest` ターゲット（Home / Search / Account） |
-| 25 | ラズパイ構成の検討（Zero W / 2W / 3B） | ✅ | `docs/RASPBERRY_PI.md` + `pi-server/` スキャフォールド |
+| 24 | ゲスト側ネイティブアプリ | ✅ | `JukeboxGuest` + `ASWebAuthenticationSession` OAuth |
+| 25 | ラズパイ構成の検討（Zero W / 2W / 3B） | ✅ | `docs/RASPBERRY_PI.md` + `pi-server/` v0.2 |
 | 26 | UI のさらなる改善（ホスト SwiftUI を Apple 公式寄り） | ✅ | `HostSetupView` を Form + NavigationStack に |
 | 27 | プレイリスト共有 URL を貼るだけでインポート | ✅ | PWA + Guest + `/api/playlists/resolve-url` |
 | 28 | プレイリストルーレットの途中参加マージ UI | ✅ | `branch` / `途中参加` 表示（PWA + ホスト） |
 | 29 | Spotify を参加者ごとに分離 | ✅ | `OAuthTokenStore` の participant キー分離 |
 | 30 | ホスト画面にもプレイリストグラフ表示 | ✅ | `NowPlayingQueueView` + `PlaylistGraphView` |
-| 31 | Phase 6 実機耐久（24h・Wi-Fi 復旧） | 🟡 | `HostDurabilityLog` + `docs/durability-test.md`（実機試験は手動） |
+| 31 | Phase 6 実機耐久（24h・Wi-Fi 復旧） | ✅ | API・セルフテスト・`HostDurabilitySheet`（24h 実機記録は手動） |
+| 32 | PWA ホスト自動発見 | ✅ | `/api/discover` + Account「ホストを探す」 |
+| 33 | 同期メトリクス実測表示 | ✅ | `/api/metrics` + PWA Account 往復遅延 |
+
+---
+
+## プラットフォーム制約（実装不可・代替運用）
+
+| 項目 | 状態 | 補足 |
+|------|------|------|
+| 参加者ごとの Apple Music 認証 | 制約 | MusicKit はホスト共有のみ |
+| Spotify ホスト内ネイティブ再生 | 制約 | deep link 運用（SDK / Premium 制約） |
 
 ---
 

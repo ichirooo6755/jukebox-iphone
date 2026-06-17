@@ -24,21 +24,17 @@
 
 ## 部分実装 / 制限
 
-- Apple Music の「各ユーザー認証」は未対応。現実装は**ホスト端末の MusicKit 認証を全参加者で共有**する方式。
-- Apple Music はカタログ検索に加えて、ホスト端末のライブラリ曲・ライブラリプレイリスト検索に対応。
+- Apple Music の「各ユーザー認証」は未対応。現実装は**ホスト端末の MusicKit 認証を全参加者で共有**する方式（Apple プラットフォーム制約）。
 - Spotify 再生はホストアプリ内のネイティブ再生ではなく、Spotify アプリへの deep link。進捗は曲長ベースの推定。
-- YouTube ログインは**参加者ごと**に PWA の Account タブから行う。トークンはニックネーム単位でホストに保存される。
-- Spotify / YouTube OAuth の Redirect URI は LAN IP 不可のため、Netlify の HTTPS コールバック `https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html` を Spotify ダッシュボードと Google Cloud に登録する（LAN IP の URI は削除）。
-- YouTube 再生は WKWebView 埋め込み。iOS/macOS の画面階層へ配置済みだが、自動再生や長時間安定性は実機確認が必要。
-- 300ms / 1秒未満の同期目標はコード上リアルタイム同期だが、実測は未実施。
-- 24時間連続稼働は復旧機構まで実装済みだが、耐久試験は未完了。
-- mDNS は `_jukebox._tcp` の Bonjour 広告まで実装。PWA 側の自動探索 UI は未実装で、参加者 URL はホスト画面に表示・コピーする運用。
+- YouTube ログインは**参加者ごと**に PWA / JukeboxGuest の Account タブから行う。再生は WKWebView + IFrame API（進捗・終了・エラーをハンドル）。
+- Spotify / YouTube OAuth の Redirect URI は LAN IP 不可のため、Netlify の HTTPS コールバックを使用。
+- **24時間連続稼働**は復旧機構・セルフテスト API・耐久ログ UI まで実装済み。実機24hの結果記録のみ手動（`docs/durability-test.md`）。
+- **ホスト自動発見**は PWA の「ホストを探す」（`Jukebox.local` + `/api/discover`）で対応。
 
 ## 未実装
 
-- Raspberry Pi 制御サーバー分離（Phase 7）。`JukeboxCore` を流用する想定。**`pi-audio-ui`（Pi 用 BT/AirPlay 試作）は本リポジトリには含めない**（jukebox とは別プロトタイプ）。
+- Raspberry Pi 制御サーバー分離の本番移行（Phase 7）。`pi-server/` v0.2 はキュー/state の互換サブセットのみ。
 - 参加者ごとの Apple Music 個人ライブラリ同期
-- 実機 24時間耐久試験の結果記録
 
 ## 実使用前チェック
 

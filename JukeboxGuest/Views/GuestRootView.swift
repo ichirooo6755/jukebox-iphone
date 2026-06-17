@@ -100,7 +100,6 @@ struct GuestSearchView: View {
 
 struct GuestAccountView: View {
     @EnvironmentObject private var client: GuestAPIClient
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -129,8 +128,10 @@ struct GuestAccountView: View {
                                     Text("OK").foregroundStyle(.green)
                                 } else if status.service == .appleMusic {
                                     Text("ホスト共有").foregroundStyle(.secondary)
-                                } else if let loginURL = status.loginURL, let url = client.authURL(loginURL) {
-                                    Button("ログイン") { openURL(url) }
+                                } else if status.loginURL != nil {
+                                    Button("ログイン") {
+                                        Task { await client.login(service: status.service) }
+                                    }
                                 } else {
                                     Text("未設定").foregroundStyle(.orange)
                                 }

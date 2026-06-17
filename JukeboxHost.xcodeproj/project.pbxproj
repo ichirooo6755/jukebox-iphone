@@ -39,12 +39,15 @@
 		7714F4715DBE19A7270F9691 /* VisualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */; };
 		77A0069C9CB625DDA06AB1A4 /* HostSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3A24E9219C55EB44606CBD /* HostSetupView.swift */; };
 		7B91F9048632A7CDFF8D6ED5 /* PlatformServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */; };
+		8FB70F38E6DE50A9A8DE9A39 /* GuestOAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1082F33F3A177C1A07EE7AC /* GuestOAuthSession.swift */; };
 		9CEB6B7CEF8E19DB5D0EC291 /* ParticipantQRCodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */; };
 		9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
 		A2F6C0EAED9372F50ACB1104 /* PlaylistGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */; };
+		ABF106FBF37F50392C70406E /* HostDurabilitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2079A36AF3165208BD1793C7 /* HostDurabilitySheet.swift */; };
 		AC66F6660A0426C980A73960 /* PlatformServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */; };
 		AE1785FDB98710B8B6B69222 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F0C0CE53A967E878430EFF3 /* Secrets.plist */; };
 		B20D7D93DD474D16407F767E /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05EBA0EAD856983B956699A /* AppModel.swift */; };
+		B2D8E03CD4DFED6CB50C4911 /* HostDurabilitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2079A36AF3165208BD1793C7 /* HostDurabilitySheet.swift */; };
 		B3A8BEDFC94DCD73590B7972 /* ParticipantQRCodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */; };
 		B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
 		C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
@@ -66,6 +69,7 @@
 		117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualizerView.swift; sourceTree = "<group>"; };
 		1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxHostApp.swift; sourceTree = "<group>"; };
 		1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		2079A36AF3165208BD1793C7 /* HostDurabilitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDurabilitySheet.swift; sourceTree = "<group>"; };
 		21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostArtworkURL.swift; sourceTree = "<group>"; };
 		239A6B2C23B09546B42A0AB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		32332384D447815DC97A42C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -82,6 +86,7 @@
 		8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAudioDevice.swift; sourceTree = "<group>"; };
 		9D40C79331A5544DECC79525 /* JukeboxGuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxGuestApp.swift; sourceTree = "<group>"; };
 		A0BBCB3191CC98BFFD48F0F9 /* JukeboxCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JukeboxCore; path = Packages/JukeboxCore; sourceTree = SOURCE_ROOT; };
+		A1082F33F3A177C1A07EE7AC /* GuestOAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestOAuthSession.swift; sourceTree = "<group>"; };
 		B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostLifecycleManager.swift; sourceTree = "<group>"; };
 		B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRoutePickerView.swift; sourceTree = "<group>"; };
 		B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformServices.swift; sourceTree = "<group>"; };
@@ -163,6 +168,7 @@
 			isa = PBXGroup;
 			children = (
 				68FBA426605DB90C9B675611 /* GuestAPIClient.swift */,
+				A1082F33F3A177C1A07EE7AC /* GuestOAuthSession.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -227,6 +233,7 @@
 			children = (
 				B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */,
 				74C89E1C53664B063BB6595D /* DisplayContainerView.swift */,
+				2079A36AF3165208BD1793C7 /* HostDurabilitySheet.swift */,
 				7C3A24E9219C55EB44606CBD /* HostSetupView.swift */,
 				CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */,
 				D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */,
@@ -423,6 +430,7 @@
 				4D999A22C4D233473C70366A /* AudioRoutePickerView.swift in Sources */,
 				7606E56151CE36C8E92C7940 /* DisplayContainerView.swift in Sources */,
 				58B93B7C7B767FD8B59A752D /* HostArtworkURL.swift in Sources */,
+				B2D8E03CD4DFED6CB50C4911 /* HostDurabilitySheet.swift in Sources */,
 				4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */,
 				16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */,
 				1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */,
@@ -450,6 +458,7 @@
 				47C3C44D7249AF2AE4BDCE2C /* AudioRoutePickerView.swift in Sources */,
 				1E1D3C7D23EB8746CDD3A85C /* DisplayContainerView.swift in Sources */,
 				CC2D776F944C74638E9383B8 /* HostArtworkURL.swift in Sources */,
+				ABF106FBF37F50392C70406E /* HostDurabilitySheet.swift in Sources */,
 				B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */,
 				77A0069C9CB625DDA06AB1A4 /* HostSetupView.swift in Sources */,
 				C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */,
@@ -471,6 +480,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				59A215C9D79B4488F036DCD0 /* GuestAPIClient.swift in Sources */,
+				8FB70F38E6DE50A9A8DE9A39 /* GuestOAuthSession.swift in Sources */,
 				053017EE09D4F67C7CAB8D49 /* GuestRootView.swift in Sources */,
 				56D9595B562CBA2EA46E7A3D /* JukeboxGuestApp.swift in Sources */,
 			);
