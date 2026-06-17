@@ -42,8 +42,7 @@ final class AppModel: ObservableObject {
     @Published var crossfadeOpacity: Double = 1.0
 
     var participantURL: String? {
-        guard let local = participantLocalURL else { return nil }
-        return "\(local)?join=1"
+        participantLocalURL
     }
 
     var participantLocalURL: String? {
@@ -100,6 +99,18 @@ final class AppModel: ObservableObject {
     private func bootstrap() async {
         audioOutput.configureSession()
         await SearchCoordinator.shared.setAppleMusicSearcher(AppleMusicSearchService())
+        await ArtworkResolverRegistry.shared.setHandler { request in
+            switch request.service {
+            case .appleMusic:
+                return await AppleMusicArtworkResolver.resolveImageData(
+                    musicID: request.musicID,
+                    title: request.title,
+                    artist: request.artist
+                )
+            case .spotify, .youtube:
+                return nil
+            }
+        }
         await store.setPlaybackController(playbackEngine)
         playbackEngine.onTrackFinished = { [weak self] in
             Task { try? await self?.store.onTrackFinished() }

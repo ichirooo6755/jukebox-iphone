@@ -261,7 +261,13 @@ struct AppleMusicSearchService: AppleMusicSearching {
     }
 
     private func artworkURL(from artwork: Artwork?) -> String? {
-        ArtworkURLNormalizer.normalize(artwork?.url(width: 300, height: 300)?.absoluteString)
+        guard let artwork else { return nil }
+        for size in [600, 300, 120, 64] {
+            guard let raw = artwork.url(width: size, height: size)?.absoluteString,
+                  let normalized = ArtworkURLNormalizer.normalize(raw) else { continue }
+            return normalized
+        }
+        return nil
     }
 
     private func dedupeTracks(_ tracks: [TrackSearchResult]) -> [TrackSearchResult] {

@@ -500,15 +500,18 @@ input, select {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+.onboarding[hidden] {
+  display: none !important;
+}
+
 .onboarding {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 12px;
+  justify-content: center;
+  align-items: center;
   padding: 20px;
   padding-bottom: calc(20px + var(--safe-bottom));
   z-index: 90;
@@ -562,6 +565,11 @@ input, select {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.dock-dismiss {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .dock-item {

@@ -23,7 +23,7 @@ export function setNickname(name) {
 }
 
 export function isOnboarded() {
-  return localStorage.getItem(STORAGE_ONBOARDED) === '1';
+  return localStorage.getItem(STORAGE_ONBOARDED) === '1' || Boolean(getNickname());
 }
 
 export function setOnboarded() {
@@ -46,18 +46,32 @@ export function skipService(service) {
 
 export function normalizeArtworkURL(url) {
   if (!url) return '';
-  return url
+  const value = url
     .replace(/\{w\}/g, '300')
     .replace(/\{h\}/g, '300')
     .replace(/%7Bw%7D/gi, '300')
     .replace(/%7Bh%7D/gi, '300')
     .replace(/^http:\/\//i, 'https://');
+  return value.startsWith('https://') ? value : '';
 }
 
-export function artworkSrc(url) {
+export function artworkSrc(itemOrUrl, maybeItem = null) {
+  const item = typeof itemOrUrl === 'object' && itemOrUrl !== null ? itemOrUrl : maybeItem;
+  const url = typeof itemOrUrl === 'string' ? itemOrUrl : itemOrUrl?.artwork_url;
   const normalized = normalizeArtworkURL(url);
-  if (!normalized) return '';
-  return `${getBaseURL()}/api/artwork?url=${encodeURIComponent(normalized)}`;
+  if (normalized) {
+    return `${getBaseURL()}/api/artwork?url=${encodeURIComponent(normalized)}`;
+  }
+  if (!item?.service) return '';
+  const musicId = item.music_id || item.id;
+  if (!musicId) return '';
+  const params = new URLSearchParams({
+    service: item.service,
+    music_id: musicId,
+  });
+  if (item.title) params.set('title', item.title);
+  if (item.artist) params.set('artist', item.artist);
+  return `${getBaseURL()}/api/artwork?${params.toString()}`;
 }
 
 function withParticipant(path, participant) {
@@ -109,7 +123,10 @@ export const api = {
 };
 
 export async function ensureParticipant() {
-  if (getNickname()) return getNickname();
+  if (getNickname()) {
+    setOnboarded();
+    return getNickname();
+  }
   const user = await api.registerUser('');
   setNickname(user.nickname);
   setOnboarded();

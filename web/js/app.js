@@ -4,12 +4,10 @@ import {
   ensureParticipant,
   getBaseURL,
   getNickname,
-  getSkippedServices,
   isOnboarded,
   setBaseURL,
   setNickname,
   setOnboarded,
-  skipService,
 } from './api.js';
 import { connect, onEvent } from './ws.js';
 
@@ -50,7 +48,6 @@ const els = {
   onboarding: document.getElementById('onboarding'),
   onboardingName: document.getElementById('onboarding-name'),
   onboardingJoin: document.getElementById('onboarding-join'),
-  serviceDock: document.getElementById('service-dock'),
   toast: document.getElementById('toast'),
 };
 
@@ -78,8 +75,8 @@ function showToast(message) {
   }, 2200);
 }
 
-function artworkMarkup(url, size = 56) {
-  const src = artworkSrc(url);
+function artworkMarkup(item, size = 56) {
+  const src = artworkSrc(item);
   if (!src) {
     return `<div class="artwork placeholder" style="width:${size}px;height:${size}px;font-size:1.5rem">♪</div>`;
   }
@@ -133,7 +130,7 @@ function renderNowPlaying(trackChanged = false) {
   els.npService.textContent = serviceLabel(current.service);
   els.npDuration.textContent = formatTime(current.duration);
 
-  const artwork = artworkSrc(current.artwork_url);
+  const artwork = artworkSrc(current);
   if (artwork) {
     els.npArtwork.src = artwork;
     els.npArtwork.hidden = false;
@@ -162,7 +159,7 @@ function renderQueue() {
     li.dataset.id = item.id;
     li.innerHTML = `
       <span class="drag-handle">≡</span>
-      ${artworkMarkup(item.artwork_url)}
+      ${artworkMarkup(item)}
       <div class="meta">
         <h3>${escapeHtml(item.title)}</h3>
         <p>${escapeHtml(item.artist)} · ${serviceLabel(item.service)} · ${escapeHtml(item.added_by)}</p>
@@ -271,7 +268,7 @@ async function runSearch() {
       const badge = item.kind && item.kind !== 'track' ? `<span class="kind-badge">${kindLabel(item.kind)}</span>` : '';
       const actionLabel = item.kind === 'playlist' ? '↧' : item.kind === 'artist' ? '↧' : '＋';
       li.innerHTML = `
-        ${artworkMarkup(item.artwork_url)}
+        ${artworkMarkup(item)}
         <div class="meta">
           <h3>${escapeHtml(item.title)} ${badge}</h3>
           <p>${escapeHtml(item.subtitle || item.artist || item.owner)} · ${serviceLabel(item.service)}${item.track_count ? ` · ${item.track_count}曲` : ''}</p>
@@ -333,7 +330,9 @@ function setupAccount() {
     }
   });
 
-  refreshAuthStatus();
+  if (isOnboarded()) {
+    refreshAuthStatus();
+  }
 }
 
 function setupSearch() {
@@ -383,17 +382,6 @@ function setupSearch() {
   updateSearchMode();
 }
 
-function withOnboardReturn(loginUrl) {
-  if (!loginUrl) return loginUrl;
-  try {
-    const url = new URL(loginUrl, getBaseURL());
-    url.searchParams.set('return', 'onboard');
-    return url.toString();
-  } catch {
-    return loginUrl;
-  }
-}
-
 function cleanQueryParams(...keys) {
   const url = new URL(window.location.href);
   keys.forEach((key) => url.searchParams.delete(key));
@@ -401,30 +389,77 @@ function cleanQueryParams(...keys) {
   window.history.replaceState({}, '', next);
 }
 
-function showOnboardingOverlay({ showNameStep }) {
-  els.onboarding.hidden = false;
-  const nameCard = els.onboarding.querySelector('.onboarding-card');
-  if (nameCard) nameCard.hidden = !showNameStep;
-  if (!showNameStep) {
-    els.serviceDock.hidden = false;
-  }
+function finishOnboarding({ toastMessage } = {}) {
+  setOnboarded();
+  setBaseURL(getBaseURL());
+  hideOnboardingOverlay();
+  if (toastMessage) showToast(toastMessage);
 }
 
 function hideOnboardingOverlay() {
+  if (!els.onboarding) return;
   els.onboarding.hidden = true;
-  els.serviceDock.hidden = true;
+  els.onboarding.setAttribute('aria-hidden', 'true');
 }
 
-async function resumeServiceOnboarding() {
-  showOnboardingOverlay({ showNameStep: false });
-  try {
-    await ensureParticipant();
-    await refreshAuthStatus();
-  } catch (err) {
-    showToast(err.message);
+function showOnboardingOverlay() {
+  if (!els.onboarding) return;
+  els.onboarding.hidden = false;
+  els.onboarding.removeAttribute('aria-hidden');
+}
+
+function setupOnboarding() {
+  const params = new URLSearchParams(window.location.search);
+  const hostParam = params.get('host');
+  if (hostParam) {
+    setBaseURL(hostParam);
+  } else if (!localStorage.getItem('jukebox_host_url')) {
+    setBaseURL(window.location.origin);
   }
-}
 
+  const authService = params.get('auth');
+  const authOk = params.get('ok') === '1';
+  cleanQueryParams('onboard', 'auth', 'ok', 'join');
+
+  if (authService && authOk) {
+    showToast(`${serviceLabel(authService)} にログインしました`);
+  }
+
+  if (isOnboarded()) {
+    hideOnboardingOverlay();
+    return;
+  }
+
+  showOnboardingOverlay();
+  if (getNickname()) {
+    els.onboardingName.value = getNickname();
+  }
+
+  const join = async () => {
+    if (els.onboardingJoin?.disabled) return;
+    if (els.onboardingJoin) {
+      els.onboardingJoin.disabled = true;
+      els.onboardingJoin.textContent = '参加中...';
+    }
+    const name = els.onboardingName?.value.trim() ?? '';
+    try {
+      const user = await api.registerUser(name);
+      setNickname(user.nickname);
+      finishOnboarding({ toastMessage: `ようこそ、${user.nickname} さん` });
+    } catch (err) {
+      showToast(err.message || '参加に失敗しました');
+      if (els.onboardingJoin) {
+        els.onboardingJoin.disabled = false;
+        els.onboardingJoin.textContent = '参加する';
+      }
+    }
+  };
+
+  els.onboardingJoin?.addEventListener('click', join);
+  els.onboardingName?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') join();
+  });
+}
 function renderAuthAction(status) {
   if (status.is_authenticated) {
     return '<span class="auth-pill ok">OK</span>';
@@ -456,108 +491,9 @@ async function refreshAuthStatus() {
       `;
       els.authStatusList.appendChild(row);
     });
-    renderServiceDock(statuses);
   } catch (err) {
     els.authStatusList.innerHTML = `<p class="muted">認証状態を取得できません: ${escapeHtml(err.message)}</p>`;
   }
-}
-
-function renderServiceDock(statuses) {
-  if (!els.serviceDock || els.onboarding.hidden) return;
-  const skipped = new Set(getSkippedServices());
-  els.serviceDock.hidden = false;
-
-  const title = els.serviceDock.querySelector('.dock-title');
-  const hint = els.serviceDock.querySelector('.dock-hint');
-  els.serviceDock.innerHTML = '';
-  if (title) els.serviceDock.appendChild(title);
-  if (hint) els.serviceDock.appendChild(hint);
-
-  const items = document.createElement('div');
-  items.className = 'dock-items';
-  items.innerHTML = statuses.map((status) => {
-    if (status.is_authenticated || skipped.has(status.service)) {
-      return `<div class="dock-item done">${serviceLabel(status.service)} ✓</div>`;
-    }
-    if (status.service === 'apple_music' || !status.login_url) {
-      return `<button class="dock-item skip" data-service="${status.service}">${serviceLabel(status.service)} · Skip</button>`;
-    }
-    const loginUrl = withOnboardReturn(status.login_url);
-    return `
-      <a class="dock-item login" href="${escapeHtml(loginUrl)}">${serviceLabel(status.service)} · ログイン</a>
-      <button class="dock-item skip" data-service="${status.service}">Skip</button>
-    `;
-  }).join('');
-  els.serviceDock.appendChild(items);
-
-  els.serviceDock.querySelectorAll('.dock-item.skip').forEach((button) => {
-    button.addEventListener('click', () => {
-      skipService(button.dataset.service);
-      refreshAuthStatus();
-      maybeFinishOnboarding(statuses);
-    });
-  });
-
-  maybeFinishOnboarding(statuses);
-}
-
-function maybeFinishOnboarding(statuses) {
-  const skipped = new Set(getSkippedServices());
-  const allHandled = statuses.every(
-    (status) => status.is_authenticated || skipped.has(status.service) || !status.login_url
-  );
-  if (!allHandled) return;
-
-  setTimeout(() => {
-    hideOnboardingOverlay();
-  }, 600);
-}
-
-function setupOnboarding() {
-  const params = new URLSearchParams(window.location.search);
-  const hostParam = params.get('host');
-  if (hostParam) {
-    setBaseURL(hostParam);
-  }
-
-  const resumeServices = params.get('onboard') === '1';
-  const forceJoin = params.get('join') === '1';
-  const authService = params.get('auth');
-  const authOk = params.get('ok') === '1';
-
-  if (forceJoin) {
-    localStorage.removeItem('jukebox_onboarded');
-    localStorage.removeItem('jukebox_skipped_services');
-  }
-
-  if (resumeServices && isOnboarded()) {
-    if (authService && authOk) {
-      showToast(`${serviceLabel(authService)} にログインしました`);
-    }
-    cleanQueryParams('onboard', 'auth', 'ok', 'join');
-    resumeServiceOnboarding();
-    return;
-  }
-
-  if (isOnboarded() && !forceJoin) {
-    hideOnboardingOverlay();
-    return;
-  }
-
-  showOnboardingOverlay({ showNameStep: true });
-  els.onboardingJoin.addEventListener('click', async () => {
-    const name = els.onboardingName.value.trim();
-    try {
-      const user = await api.registerUser(name);
-      setNickname(user.nickname);
-      setOnboarded();
-      showOnboardingOverlay({ showNameStep: false });
-      await refreshAuthStatus();
-      showToast(`ようこそ、${user.nickname} さん`);
-    } catch (err) {
-      showToast(err.message);
-    }
-  });
 }
 
 function setupConnection() {

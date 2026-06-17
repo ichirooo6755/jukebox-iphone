@@ -13,7 +13,7 @@ struct NowPlayingQueueView: View {
             let topInset: CGFloat = 56
 
             ZStack {
-                ArtworkBackgroundView(artworkURL: model.playbackState.current?.artworkURL)
+                ArtworkBackgroundView(item: model.playbackState.current)
 
                 if isWide {
                     HStack(spacing: edge) {
@@ -74,8 +74,7 @@ struct NowPlayingQueueView: View {
 
     private var artworkView: some View {
         Group {
-            if let urlString = model.playbackState.current?.artworkURL,
-               let url = URL(string: urlString) {
+            if let url = HostArtworkURL.imageURL(for: model.playbackState.current) {
                 AsyncImage(url: url) { img in
                     img.resizable().scaledToFill()
                 } placeholder: {
@@ -168,7 +167,7 @@ struct NowPlayingQueueView: View {
                     VStack(spacing: 6) {
                         ForEach(model.playbackState.queue.prefix(8)) { item in
                             HStack(spacing: 10) {
-                                if let url = item.artworkURL, let imgURL = URL(string: url) {
+                                if let imgURL = HostArtworkURL.imageURL(for: item) {
                                     AsyncImage(url: imgURL) { img in
                                         img.resizable().scaledToFill()
                                     } placeholder: {
@@ -239,7 +238,7 @@ struct NowPlayingQueueView: View {
 }
 
 struct ArtworkBackgroundView: View {
-    let artworkURL: String?
+    let item: QueueItem?
 
     var body: some View {
         ZStack {
@@ -253,7 +252,7 @@ struct ArtworkBackgroundView: View {
                 endPoint: .bottomTrailing
             )
 
-            if let urlString = artworkURL, let url = URL(string: urlString) {
+            if let url = HostArtworkURL.imageURL(for: item) {
                 AsyncImage(url: url) { img in
                     img.resizable().scaledToFill()
                         .blur(radius: 80)

@@ -23,6 +23,7 @@
 		45988ABEBBD56BE353F686D2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
 		4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */; };
 		4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
+		58B93B7C7B767FD8B59A752D /* HostArtworkURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */; };
 		5AD776BB85703FB4B8B73D6F /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F0C0CE53A967E878430EFF3 /* Secrets.plist */; };
 		5E249584284CD11042B155E6 /* AudioOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */; };
 		715668ACD5BF1B7E25676762 /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = BF9CD71DF3BDE171CF411004 /* JukeboxCore */; };
@@ -39,11 +40,14 @@
 		B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
 		C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
 		C6A1652425D6C70335A86D0B /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4C9F88725CB4706ABFE35124 /* JukeboxCore */; };
+		CC2D776F944C74638E9383B8 /* HostArtworkURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */; };
 		CC5EBA3D032E09A8DE7BC1F8 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */; };
 		CFEE6C104FCCAB41C88E74D0 /* NowPlayingQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */; };
 		D670EE25485941A43CB5ED6B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
+		DAFEEE2CB4688E27AEC45222 /* AppleMusicArtworkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */; };
 		DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05EBA0EAD856983B956699A /* AppModel.swift */; };
 		E991864E7249943C4F33AA6B /* VolumeSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */; };
+		EB804B6174FE48FCBBBE1E5C /* AppleMusicArtworkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */; };
 		F0EBB575F4D6DA4E50EE995C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
 /* End PBXBuildFile section */
 
@@ -52,9 +56,11 @@
 		117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualizerView.swift; sourceTree = "<group>"; };
 		1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxHostApp.swift; sourceTree = "<group>"; };
 		1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostArtworkURL.swift; sourceTree = "<group>"; };
 		239A6B2C23B09546B42A0AB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		32332384D447815DC97A42C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		37A4B91373407D416ADD043C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicArtworkResolver.swift; sourceTree = "<group>"; };
 		4544CC765927F57F23C43B73 /* JukeboxHost.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JukeboxHost.entitlements; sourceTree = "<group>"; };
 		4F0C0CE53A967E878430EFF3 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		6A144FF3B00552ADB516C0F7 /* Secrets.plist.example */ = {isa = PBXFileReference; path = Secrets.plist.example; sourceTree = "<group>"; };
@@ -97,9 +103,11 @@
 		1E3A04A77FCB236B5E1C934F /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */,
 				DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */,
 				D05EBA0EAD856983B956699A /* AppModel.swift */,
 				C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */,
+				21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */,
 				B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */,
 				B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */,
 				1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */,
@@ -327,9 +335,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */,
+				DAFEEE2CB4688E27AEC45222 /* AppleMusicArtworkResolver.swift in Sources */,
 				2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */,
 				040A969194601A066427801A /* AudioOutputManager.swift in Sources */,
 				7606E56151CE36C8E92C7940 /* DisplayContainerView.swift in Sources */,
+				58B93B7C7B767FD8B59A752D /* HostArtworkURL.swift in Sources */,
 				4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */,
 				16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */,
 				1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */,
@@ -349,9 +359,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				B20D7D93DD474D16407F767E /* AppModel.swift in Sources */,
+				EB804B6174FE48FCBBBE1E5C /* AppleMusicArtworkResolver.swift in Sources */,
 				419C3F9BF4FE1078CDD11DA7 /* AppleMusicSearchService.swift in Sources */,
 				5E249584284CD11042B155E6 /* AudioOutputManager.swift in Sources */,
 				1E1D3C7D23EB8746CDD3A85C /* DisplayContainerView.swift in Sources */,
+				CC2D776F944C74638E9383B8 /* HostArtworkURL.swift in Sources */,
 				B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */,
 				77A0069C9CB625DDA06AB1A4 /* HostSetupView.swift in Sources */,
 				C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */,

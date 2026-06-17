@@ -61,7 +61,7 @@ struct VisualizerView: View {
 
     private func artwork(for item: QueueItem) -> some View {
         Group {
-            if let urlString = item.artworkURL, let url = URL(string: urlString) {
+            if let url = HostArtworkURL.imageURL(for: item) {
                 AsyncImage(url: url) { img in
                     img.resizable().scaledToFill()
                 } placeholder: {
