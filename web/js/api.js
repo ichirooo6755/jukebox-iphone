@@ -42,4 +42,5 @@ export const api = {
   reorderQueue: (order) => request('/api/queue/reorder', { method: 'PUT', body: JSON.stringify({ order }) }),
   search: (q, service) => request(`/api/search?q=${encodeURIComponent(q)}&service=${service}`),
   registerUser: (nickname) => request('/api/users', { method: 'POST', body: JSON.stringify({ nickname }) }),
+  voteSkip: (nickname) => request('/api/playback/vote-skip', { method: 'POST', body: JSON.stringify({ nickname }) }),
 };

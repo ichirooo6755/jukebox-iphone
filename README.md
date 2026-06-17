@@ -1,35 +1,39 @@
-# マルチストリーミング・ジュークボックス (iPhone)
+# マルチストリーミング・ジュークボックス (iPhone / iPad)
 
-民主的ジュークボックスの **Phase 1: iPhone only** 実装です。常設 iPhone がホスト（API・キュー・再生・Display UI）となり、参加者は同一 Wi-Fi 上の PWA からキューを編集します。
+民主的ジュークボックスの **Phase 1〜6** 実装です。常設 iPhone / iPad がホストとなり、参加者は同一 Wi-Fi 上の PWA からキューを編集します。
 
-## アーキテクチャ
+## 対応デバイス
 
-```
-参加者スマホ (PWA)  ──Wi-Fi──►  常設 iPhone (JukeboxHost)
-                                    ├ REST API + WebSocket
-                                    ├ SQLite キュー
-                                    ├ Apple Music 再生 (MusicKit)
-                                    ├ Spotify / YouTube 再生
-                                    └ Display UI (縦画面)
-```
+| 項目 | 内容 |
+|------|------|
+| iOS | **16.0+**（iPhone 8 / SE 2 / XR 以降、iPad 6 世代以降） |
+| 端末 | iPhone / iPad 両対応 |
+| 音声出力 | **3.5mm ジャック** / Lightning・USB-C 変換アダプタ経由の有線出力（DAC 不要） |
 
-Raspberry Pi によるサーバー分離は Phase 7 向けに `JukeboxCore` をパッケージ化しており、後から差し替え可能です。
+## 常設画面（2種類）
 
-## 機能
+右上メニューで切り替え可能です。
+
+1. **再生＋キュー** — Apple Music 風の Now Playing UI（横画面レイアウト対応）
+   - 大きなアルバムアート、プログレスバー、再生コントロール、音量、次の曲リスト
+2. **ビジュアライザ** — スペクトラム風のビジュアライザ＋アルバムアート
+
+## 機能一覧（Phase 6 まで）
 
 | 機能 | 状態 |
 |------|------|
 | キュー追加・削除・並び替え | ✅ |
 | WebSocket リアルタイム同期 | ✅ |
-| Now Playing / Display UI | ✅ |
 | Apple Music 検索・再生 | ✅ |
-| YouTube 検索・再生 | ✅ (APIキー要) |
-| Spotify 検索 | ✅ (Client ID要) / 再生はアプリ起動 |
-| 参加者 PWA (Home/Search/Queue/Account) | ✅ |
+| YouTube / Spotify 検索 | ✅ |
+| スキップ投票（過半数で次曲） | ✅ |
+| 曲切替クロスフェード | ✅ |
+| セッション永続化（再起動復旧） | ✅ |
+| Wi-Fi 切断・自動サーバー復旧 | ✅ |
+| 24時間常時稼働（スリープ無効化） | ✅ |
+| 参加者 PWA | ✅ |
 
 ## セットアップ
-
-### 1. ビルド
 
 ```bash
 cd jukebox-iphone
@@ -37,63 +41,43 @@ xcodegen generate
 open JukeboxHost.xcodeproj
 ```
 
-Xcode で Signing Team を設定し、実機にインストールします。
+1. Xcode で Signing Team を設定
+2. 実機（iPhone / iPad）にインストール
+3. **有線イヤホン or 3.5mm アダプタ**を接続
+4. 「ホストを開始」をタップ
+5. 参加者は `http://<ホストIP>:8765` を Safari で開く
 
-### 2. Apple Music
+### Spotify / YouTube（任意）
 
-- Apple Developer で MusicKit を有効化
-- 実機で Apple Music の利用許可を許可
-
-### 3. ホスト起動
-
-1. 常設 iPhone で **JukeboxHost** を起動
-2. 「ホストを開始」をタップ
-3. 画面に表示される IP（例: `192.168.1.10:8765`）を確認
-
-### 4. 参加者接続
-
-参加者の iPhone Safari で `http://<ホストIP>:8765` を開く  
-→ ホーム画面に追加すると PWA として利用可能
-
-Account タブでニックネームとホスト URL を設定できます。
-
-### 5. Spotify / YouTube（任意）
-
-ホスト iPhone の環境変数、または Xcode Scheme の Environment Variables に設定:
-
-| 変数 | 用途 |
-|------|------|
-| `SPOTIFY_CLIENT_ID` | Spotify 検索 |
-| `SPOTIFY_CLIENT_SECRET` | Spotify 検索 |
-| `YOUTUBE_API_KEY` | YouTube 検索 |
+Xcode Scheme → Environment Variables に `.env.example` の値を設定。
 
 ## プロジェクト構成
 
 ```
 jukebox-iphone/
-├── JukeboxHost/          # iOS ホストアプリ (SwiftUI)
-├── Packages/JukeboxCore/ # 共有ロジック (API, DB, WS)
-├── web/                  # 参加者 PWA
-└── project.yml           # XcodeGen
+├── JukeboxHost/           # iOS / iPad アプリ
+│   ├── Views/
+│   │   ├── NowPlayingQueueView.swift  # 再生＋キュー画面
+│   │   ├── VisualizerView.swift       # ビジュアライザ
+│   │   └── DisplayContainerView.swift # 画面切替
+│   └── Services/
+│       ├── AudioOutputManager.swift   # 3.5mm 出力検出
+│       └── HostLifecycleManager.swift # Phase 6 耐久性
+├── Packages/JukeboxCore/  # API / DB / WebSocket
+└── web/                   # 参加者 PWA
 ```
 
-## API
+## 音声出力について
 
-| Method | Path | 説明 |
-|--------|------|------|
-| GET | `/api/state` | 再生状態 + キュー |
-| GET | `/api/queue` | キュー一覧 |
-| POST | `/api/queue` | 曲追加 |
-| DELETE | `/api/queue/:id` | 削除 |
-| PUT | `/api/queue/reorder` | 並び替え |
-| GET | `/api/search?q=&service=` | 検索 |
-| GET | `/ws` | WebSocket 同期 |
+外部 DAC は使いません。`AVAudioSession` を `.playback` に設定し、接続されている出力先を自動検出します。
 
-## 既知の制限 (iPhone only)
+- 3.5mm ジャック（iPhone 6s〜SE 2 など）
+- Lightning / USB-C → 3.5mm 変換アダプタ
+- 内蔵スピーカー（有線未接続時）
 
-- iOS バックグラウンドでローカルサーバーが切断される場合あり（要件定義 R3）→ 将来 Raspberry Pi で制御サーバー分離
-- Spotify 再生は Spotify アプリへのディープリンク（iOS 制約）
-- YouTube は iframe プレイヤーによる再生
+## Phase 7（将来）
+
+Raspberry Pi を制御サーバーとして追加し、`JukeboxCore` をそのまま流用可能な設計です。
 
 ## ライセンス
 

@@ -86,6 +86,7 @@ public actor JukeboxServer {
     }
 
     public func start(port: UInt16 = defaultPort) async throws {
+        await store.setConnectedClients(wsHandler.clientCount)
         let http = HTTPServer(port: port)
         server = http
 
@@ -141,6 +142,14 @@ public actor JukeboxServer {
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
             try await self.store.togglePlayback()
             return HTTPResponse(statusCode: .noContent)
+        }
+
+        await http.appendRoute("POST /api/playback/vote-skip") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let req = try self.decoder.decode(SkipVoteRequest.self, from: body)
+            let skipped = try await self.store.voteSkip(nickname: req.nickname)
+            return try await self.jsonResponse(["skipped": skipped])
         }
 
         await http.appendRoute("POST /api/users") { [weak self] (request: HTTPRequest) in

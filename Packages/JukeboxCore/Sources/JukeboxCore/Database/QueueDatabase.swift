@@ -48,6 +48,20 @@ public final class QueueDatabase: @unchecked Sendable {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nickname TEXT NOT NULL UNIQUE
         );
+        CREATE TABLE IF NOT EXISTS session (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            track_json TEXT,
+            elapsed REAL NOT NULL DEFAULT 0,
+            is_playing INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS skip_votes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_key TEXT NOT NULL,
+            voter TEXT NOT NULL,
+            voted_at REAL NOT NULL,
+            UNIQUE(track_key, voter)
+        );
+        INSERT OR IGNORE INTO session (id) VALUES (1);
         """)
     }
 
@@ -170,6 +184,107 @@ public final class QueueDatabase: @unchecked Sendable {
         sqlite3_bind_text(stmt, 1, nickname, -1, SQLITE_TRANSIENT)
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
         return UserProfile(id: Int(sqlite3_column_int(stmt, 0)), nickname: String(cString: sqlite3_column_text(stmt, 1)))
+    }
+
+    // MARK: - Session persistence
+
+    public func saveSession(track: QueueItem?, elapsed: Double, isPlaying: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        let sql = """
+        UPDATE session SET track_json = ?, elapsed = ?, is_playing = ? WHERE id = 1;
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        if let track, let data = try? JSONEncoder().encode(track),
+           let json = String(data: data, encoding: .utf8) {
+            sqlite3_bind_text(stmt, 1, json, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 1)
+        }
+        sqlite3_bind_double(stmt, 2, elapsed)
+        sqlite3_bind_int(stmt, 3, isPlaying ? 1 : 0)
+        sqlite3_step(stmt)
+    }
+
+    public func loadSession() -> (track: QueueItem?, elapsed: Double, isPlaying: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        let sql = "SELECT track_json, elapsed, is_playing FROM session WHERE id = 1;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            return (nil, 0, false)
+        }
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return (nil, 0, false) }
+
+        var track: QueueItem?
+        if let ptr = sqlite3_column_text(stmt, 0) {
+            let json = String(cString: ptr)
+            if let data = json.data(using: .utf8) {
+                track = try? JSONDecoder().decode(QueueItem.self, from: data)
+            }
+        }
+        let elapsed = sqlite3_column_double(stmt, 1)
+        let isPlaying = sqlite3_column_int(stmt, 2) == 1
+        return (track, elapsed, isPlaying)
+    }
+
+    // MARK: - Skip votes
+
+    public func addSkipVote(trackKey: String, voter: String) throws -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        let sql = "INSERT OR IGNORE INTO skip_votes (track_key, voter, voted_at) VALUES (?, ?, ?);"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DatabaseError.prepareFailed
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, trackKey, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, voter, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_double(stmt, 3, Date().timeIntervalSince1970)
+        sqlite3_step(stmt)
+        return countSkipVotes(trackKey: trackKey)
+    }
+
+    public func clearSkipVotes(trackKey: String? = nil) {
+        lock.lock()
+        defer { lock.unlock() }
+        if let trackKey {
+            exec("DELETE FROM skip_votes WHERE track_key = '\(trackKey.replacingOccurrences(of: "'", with: "''"))';")
+        } else {
+            exec("DELETE FROM skip_votes;")
+        }
+    }
+
+    public func skipVoters(trackKey: String) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        let sql = "SELECT voter FROM skip_votes WHERE track_key = ? ORDER BY voted_at ASC;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, trackKey, -1, SQLITE_TRANSIENT)
+        var voters: [String] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let ptr = sqlite3_column_text(stmt, 0) {
+                voters.append(String(cString: ptr))
+            }
+        }
+        return voters
+    }
+
+    private func countSkipVotes(trackKey: String) -> Int {
+        let sql = "SELECT COUNT(*) FROM skip_votes WHERE track_key = ?;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, trackKey, -1, SQLITE_TRANSIENT)
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
+        return Int(sqlite3_column_int(stmt, 0))
     }
 
     private func reindexPositions() throws {

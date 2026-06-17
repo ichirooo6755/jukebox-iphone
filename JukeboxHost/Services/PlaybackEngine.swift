@@ -17,6 +17,7 @@ final class PlaybackEngine: PlaybackControlling {
     private var pausedElapsed: Double = 0
 
     var onTrackFinished: (() -> Void)?
+    var onLevelsUpdate: (([CGFloat]) -> Void)?
 
     nonisolated func currentElapsed() async -> Double {
         await MainActor.run { elapsed }
@@ -24,6 +25,13 @@ final class PlaybackEngine: PlaybackControlling {
 
     nonisolated func currentIsPlaying() async -> Bool {
         await MainActor.run { isPlaying }
+    }
+
+    func prepareCrossfade() async {
+        isPlaying = false
+        musicPlayer.pause()
+        youtubeWebView?.evaluateJavaScript("player.pauseVideo();", completionHandler: nil)
+        try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
     func play(item: QueueItem) async throws {
@@ -65,9 +73,7 @@ final class PlaybackEngine: PlaybackControlling {
 
     func skip() async throws {
         trackFinishedTask?.cancel()
-        if let onTrackFinished {
-            onTrackFinished()
-        }
+        onTrackFinished?()
     }
 
     private func playAppleMusic(item: QueueItem) async throws {
@@ -129,11 +135,12 @@ final class PlaybackEngine: PlaybackControlling {
                 if let time = musicPlayer.playbackTime as Double? {
                     elapsed = time
                 }
+                emitVisualizerLevels()
                 if state.playbackStatus == .stopped, currentItem != nil {
                     onTrackFinished?()
                     break
                 }
-                try? await Task.sleep(for: .milliseconds(500))
+                try? await Task.sleep(nanoseconds: 500_000_000)
             }
         }
     }
@@ -145,14 +152,25 @@ final class PlaybackEngine: PlaybackControlling {
             while !Task.isCancelled {
                 if isPlaying, let startDate {
                     elapsed = min(total, pausedElapsed + Date().timeIntervalSince(startDate))
+                    emitVisualizerLevels()
                     if elapsed >= total {
                         onTrackFinished?()
                         break
                     }
                 }
-                try? await Task.sleep(for: .milliseconds(500))
+                try? await Task.sleep(nanoseconds: 500_000_000)
             }
         }
+    }
+
+    private func emitVisualizerLevels() {
+        guard isPlaying else { return }
+        let levels = (0..<32).map { i -> CGFloat in
+            let base = sin(elapsed * 2.0 + Double(i) * 0.4) * 0.3 + 0.5
+            let noise = CGFloat.random(in: 0...0.25)
+            return CGFloat(min(1.0, max(0.08, base))) + noise * 0.3
+        }
+        onLevelsUpdate?(levels)
     }
 }
 

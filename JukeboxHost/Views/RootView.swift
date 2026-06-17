@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct RootView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         Group {
             if model.isServerRunning {
-                DisplayView()
+                DisplayContainerView()
             } else {
                 HostSetupView()
             }

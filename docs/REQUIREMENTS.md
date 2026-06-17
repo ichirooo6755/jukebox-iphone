@@ -1,22 +1,28 @@
-# iPhone Only フェーズ
+# Phase 6 まで実装済み
 
-要件定義書 v4.0 の Phase 1 実装範囲。
+## ホスト画面
 
-## 実装済み
+- **再生＋キュー**: Apple Music 風 UI（参考画像ベース）
+- **ビジュアライザ**: スペクトラムアニメーション
 
-- 常設 iPhone ホスト（API / Queue / Playback / Display UI / WebSocket）
-- 参加者 PWA（Home / Search / Queue / Account）
-- SQLite キュー永続化
-- Apple Music 検索・再生（MusicKit）
-- YouTube / Spotify 検索（API キー設定時）
-- サービス切替・自動次曲
+## Phase 5 UX
 
-## 未実装（Raspberry Pi フェーズ）
+- 曲切替クロスフェード
+- PWA / ホスト UI アニメーション
+- スキップ投票（参加者過半数）
 
-- Pi 上での制御サーバー分離
-- 24時間耐久試験の自動化
-- スキップ投票
+## Phase 6 耐久性
 
-## 元ドキュメント
+- `UIRequiresPersistentWiFi` + スリープ無効化
+- NWPathMonitor による Wi-Fi 復旧検知
+- フォアグラウンド復帰時のサーバー自動再起動
+- 30秒ウォッチドッグ
+- SQLite セッション永続化（再生中の曲を保持）
 
-親ディレクトリの `要件定義.md` を参照。
+## 音声
+
+3.5mm / 変換アダプタ経由の有線出力を想定。DAC 非対応。
+
+## 対応 OS
+
+iOS 16.0+ / iPadOS 16.0+

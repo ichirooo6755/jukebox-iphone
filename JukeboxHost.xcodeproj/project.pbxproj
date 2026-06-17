@@ -7,30 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		040A969194601A066427801A /* AudioOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */; };
 		1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
 		16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3A24E9219C55EB44606CBD /* HostSetupView.swift */; };
 		2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */; };
 		34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */; };
-		4CB8DB35003C6DEB85EE25D5 /* DisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */; };
+		4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */; };
+		4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
 		715668ACD5BF1B7E25676762 /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = BF9CD71DF3BDE171CF411004 /* JukeboxCore */; };
+		7606E56151CE36C8E92C7940 /* DisplayContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C89E1C53664B063BB6595D /* DisplayContainerView.swift */; };
 		9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
+		CFEE6C104FCCAB41C88E74D0 /* NowPlayingQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */; };
 		D670EE25485941A43CB5ED6B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
 		DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05EBA0EAD856983B956699A /* AppModel.swift */; };
+		E991864E7249943C4F33AA6B /* VolumeSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualizerView.swift; sourceTree = "<group>"; };
 		1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxHostApp.swift; sourceTree = "<group>"; };
 		1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		239A6B2C23B09546B42A0AB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		32332384D447815DC97A42C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		37A4B91373407D416ADD043C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		4544CC765927F57F23C43B73 /* JukeboxHost.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JukeboxHost.entitlements; sourceTree = "<group>"; };
-		6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayView.swift; sourceTree = "<group>"; };
+		74C89E1C53664B063BB6595D /* DisplayContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayContainerView.swift; sourceTree = "<group>"; };
 		7C3A24E9219C55EB44606CBD /* HostSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSetupView.swift; sourceTree = "<group>"; };
 		A0BBCB3191CC98BFFD48F0F9 /* JukeboxCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JukeboxCore; path = Packages/JukeboxCore; sourceTree = SOURCE_ROOT; };
+		B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostLifecycleManager.swift; sourceTree = "<group>"; };
+		C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutputManager.swift; sourceTree = "<group>"; };
+		CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingQueueView.swift; sourceTree = "<group>"; };
 		D05EBA0EAD856983B956699A /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicSearchService.swift; sourceTree = "<group>"; };
 		EACDA7E41AB4C133F7A4ACBD /* JukeboxHost.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JukeboxHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeSliderView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +60,8 @@
 			children = (
 				DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */,
 				D05EBA0EAD856983B956699A /* AppModel.swift */,
+				C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */,
+				B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */,
 				1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */,
 			);
 			path = Services;
@@ -104,9 +116,12 @@
 		F5BD8759E9F50C70C502F66C /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				6C7A1A28CEE883FC60DA4515 /* DisplayView.swift */,
+				74C89E1C53664B063BB6595D /* DisplayContainerView.swift */,
 				7C3A24E9219C55EB44606CBD /* HostSetupView.swift */,
+				CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */,
 				37A4B91373407D416ADD043C /* RootView.swift */,
+				117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */,
+				F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -189,11 +204,16 @@
 			files = (
 				DF0EF4A866E6458A6B397E02 /* AppModel.swift in Sources */,
 				2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */,
-				4CB8DB35003C6DEB85EE25D5 /* DisplayView.swift in Sources */,
+				040A969194601A066427801A /* AudioOutputManager.swift in Sources */,
+				7606E56151CE36C8E92C7940 /* DisplayContainerView.swift in Sources */,
+				4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */,
 				16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */,
 				1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */,
+				CFEE6C104FCCAB41C88E74D0 /* NowPlayingQueueView.swift in Sources */,
 				34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */,
 				9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */,
+				4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */,
+				E991864E7249943C4F33AA6B /* VolumeSliderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -215,7 +235,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jukebox.host;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -234,7 +254,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.jukebox.host;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -290,7 +310,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -348,7 +368,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

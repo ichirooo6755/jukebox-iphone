@@ -90,26 +90,65 @@ public struct UserProfile: Codable, Identifiable, Sendable {
     }
 }
 
+public struct SkipVoteState: Codable, Sendable, Equatable {
+    public var votes: Int
+    public var required: Int
+    public var voters: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case votes, required, voters
+    }
+
+    public init(votes: Int = 0, required: Int = 2, voters: [String] = []) {
+        self.votes = votes
+        self.required = required
+        self.voters = voters
+    }
+
+    public static let empty = SkipVoteState()
+}
+
 public struct NowPlayingState: Codable, Sendable, Equatable {
     public var current: QueueItem?
     public var elapsed: Double
     public var isPlaying: Bool
     public var queue: [QueueItem]
+    public var skipVote: SkipVoteState
+    public var connectedClients: Int
 
     enum CodingKeys: String, CodingKey {
         case current, elapsed
         case isPlaying = "is_playing"
         case queue
+        case skipVote = "skip_vote"
+        case connectedClients = "connected_clients"
     }
 
-    public init(current: QueueItem?, elapsed: Double, isPlaying: Bool, queue: [QueueItem]) {
+    public init(
+        current: QueueItem?,
+        elapsed: Double,
+        isPlaying: Bool,
+        queue: [QueueItem],
+        skipVote: SkipVoteState = .empty,
+        connectedClients: Int = 0
+    ) {
         self.current = current
         self.elapsed = elapsed
         self.isPlaying = isPlaying
         self.queue = queue
+        self.skipVote = skipVote
+        self.connectedClients = connectedClients
     }
 
     public static let empty = NowPlayingState(current: nil, elapsed: 0, isPlaying: false, queue: [])
+}
+
+public struct SkipVoteRequest: Codable, Sendable {
+    public var nickname: String
+
+    public init(nickname: String) {
+        self.nickname = nickname
+    }
 }
 
 public struct TrackSearchResult: Codable, Identifiable, Sendable {

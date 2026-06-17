@@ -6,6 +6,7 @@ const state = {
   queue: [],
   elapsed: 0,
   isPlaying: false,
+  skipVote: { votes: 0, required: 2, voters: [] },
 };
 
 const els = {
@@ -18,6 +19,9 @@ const els = {
   npProgress: document.getElementById('np-progress'),
   npElapsed: document.getElementById('np-elapsed'),
   npDuration: document.getElementById('np-duration'),
+  voteSkip: document.getElementById('vote-skip'),
+  skipVotes: document.getElementById('skip-votes'),
+  skipRequired: document.getElementById('skip-required'),
   searchInput: document.getElementById('search-input'),
   searchService: document.getElementById('search-service'),
   searchResults: document.getElementById('search-results'),
@@ -37,16 +41,25 @@ function serviceLabel(service) {
 }
 
 function applyState(payload) {
+  const prevId = state.nowPlaying?.music_id;
   state.nowPlaying = payload.current;
   state.queue = payload.queue || [];
   state.elapsed = payload.elapsed || 0;
   state.isPlaying = payload.is_playing;
-  renderNowPlaying();
+  state.skipVote = payload.skip_vote || { votes: 0, required: 2, voters: [] };
+  renderNowPlaying(prevId !== state.nowPlaying?.music_id);
   renderQueue();
 }
 
-function renderNowPlaying() {
+function renderNowPlaying(trackChanged = false) {
   const current = state.nowPlaying;
+  const card = document.querySelector('.now-playing-card');
+  if (trackChanged && card) {
+    card.classList.remove('track-change');
+    void card.offsetWidth;
+    card.classList.add('track-change');
+  }
+
   if (!current) {
     els.npTitle.textContent = '再生待ち';
     els.npArtist.textContent = 'キューに曲を追加してください';
@@ -56,8 +69,15 @@ function renderNowPlaying() {
     els.npProgress.style.width = '0%';
     els.npElapsed.textContent = '0:00';
     els.npDuration.textContent = '0:00';
+    els.voteSkip.hidden = true;
     return;
   }
+
+  els.voteSkip.hidden = false;
+  els.skipVotes.textContent = state.skipVote.votes;
+  els.skipRequired.textContent = state.skipVote.required;
+  const nick = getNickname();
+  els.voteSkip.disabled = state.skipVote.voters?.includes(nick);
 
   els.npTitle.textContent = current.title;
   els.npArtist.textContent = current.artist;
@@ -223,6 +243,14 @@ function setupSearch() {
     searchTimer = setTimeout(runSearch, 300);
   });
   els.searchService.addEventListener('change', runSearch);
+
+  els.voteSkip.addEventListener('click', async () => {
+    try {
+      await api.voteSkip(getNickname());
+    } catch (err) {
+      console.error(err);
+    }
+  });
 }
 
 function setupConnection() {

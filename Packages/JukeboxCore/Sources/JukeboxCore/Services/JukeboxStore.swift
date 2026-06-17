@@ -7,16 +7,19 @@ public protocol PlaybackControlling: AnyObject, Sendable {
     func skip() async throws
     func currentElapsed() async -> Double
     func currentIsPlaying() async -> Bool
+    func prepareCrossfade() async
 }
 
 public actor JukeboxStore {
     public private(set) var nowPlaying: QueueItem?
     public private(set) var elapsed: Double = 0
     public private(set) var isPlaying = false
+    public private(set) var connectedClients = 0
 
     private let database: QueueDatabase
     private var listeners: [UUID: (JukeboxEvent) -> Void] = [:]
     private weak var playback: (any PlaybackControlling)?
+    private var skipVoteRequired = 2
 
     public init(database: QueueDatabase = QueueDatabase()) {
         self.database = database
@@ -24,6 +27,11 @@ public actor JukeboxStore {
 
     public func setPlaybackController(_ controller: (any PlaybackControlling)?) {
         playback = controller
+    }
+
+    public func setConnectedClients(_ count: Int) {
+        connectedClients = count
+        skipVoteRequired = max(2, Int(ceil(Double(count + 1) / 2.0)))
     }
 
     public func subscribe(_ handler: @escaping (JukeboxEvent) -> Void) -> UUID {
@@ -42,6 +50,19 @@ public actor JukeboxStore {
         }
     }
 
+    private func trackKey(for item: QueueItem?) -> String? {
+        guard let item else { return nil }
+        return "\(item.service.rawValue):\(item.musicID)"
+    }
+
+    private func skipVoteState() -> SkipVoteState {
+        guard let item = nowPlaying, let key = trackKey(for: item) else {
+            return SkipVoteState(required: skipVoteRequired)
+        }
+        let voters = database.skipVoters(trackKey: key)
+        return SkipVoteState(votes: voters.count, required: skipVoteRequired, voters: voters)
+    }
+
     public func currentState() async -> NowPlayingState {
         let queue = database.fetchQueue()
         var playbackElapsed = elapsed
@@ -54,7 +75,9 @@ public actor JukeboxStore {
             current: nowPlaying,
             elapsed: playbackElapsed,
             isPlaying: playbackIsPlaying,
-            queue: queue
+            queue: queue,
+            skipVote: skipVoteState(),
+            connectedClients: connectedClients
         )
     }
 
@@ -88,7 +111,22 @@ public actor JukeboxStore {
         broadcast(.state(await currentState()))
     }
 
+    public func voteSkip(nickname: String) async throws -> Bool {
+        guard let item = nowPlaying, let key = trackKey(for: item) else { return false }
+        let count = try database.addSkipVote(trackKey: key, voter: nickname)
+        broadcast(.state(await currentState()))
+        if count >= skipVoteRequired {
+            try await skipTrack()
+            return true
+        }
+        return false
+    }
+
     public func skipTrack() async throws {
+        if let key = trackKey(for: nowPlaying) {
+            database.clearSkipVotes(trackKey: key)
+        }
+        await playback?.prepareCrossfade()
         try await playNext()
     }
 
@@ -104,6 +142,7 @@ public actor JukeboxStore {
             await playback?.resume()
             isPlaying = true
         }
+        persistSession()
         broadcast(.state(await currentState()))
     }
 
@@ -112,16 +151,23 @@ public actor JukeboxStore {
     }
 
     public func playNext() async throws {
+        if let key = trackKey(for: nowPlaying) {
+            database.clearSkipVotes(trackKey: key)
+        }
+        await playback?.prepareCrossfade()
+
         guard let next = try database.popFirst() else {
             nowPlaying = nil
             isPlaying = false
             elapsed = 0
+            persistSession()
             broadcast(.state(await currentState()))
             return
         }
 
         nowPlaying = next
         isPlaying = true
+        persistSession()
         broadcast(.state(await currentState()))
 
         if let playback {
@@ -141,8 +187,25 @@ public actor JukeboxStore {
         }
     }
 
+    private func persistSession() {
+        database.saveSession(track: nowPlaying, elapsed: elapsed, isPlaying: isPlaying)
+    }
+
     public func restoreSession() async throws {
+        let saved = database.loadSession()
         let queue = database.fetchQueue()
+
+        if let track = saved.track {
+            nowPlaying = track
+            elapsed = saved.elapsed
+            isPlaying = saved.isPlaying
+            if let playback, saved.isPlaying {
+                try await playback.play(item: track)
+            }
+            broadcast(.state(await currentState()))
+            return
+        }
+
         if nowPlaying == nil, !queue.isEmpty {
             try await playNext()
         } else {
