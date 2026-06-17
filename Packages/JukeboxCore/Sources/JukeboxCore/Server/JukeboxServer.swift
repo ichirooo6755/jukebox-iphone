@@ -294,9 +294,15 @@ public actor JukeboxServer {
         await http.appendRoute("GET /ws", to: .webSocket(wsHandler))
 
         if let webRoot {
-            let staticFiles = StaticWebFilesHandler(root: webRoot)
-            await http.appendRoute("GET /", to: staticFiles)
-            await http.appendRoute("GET /*", to: staticFiles)
+            let root = webRoot.standardizedFileURL
+            let staticFiles = StaticWebFilesHandler(root: root)
+            await http.appendRoute("*") { request in
+                let path = request.path
+                if path.hasPrefix("/api/") || path == "/ws" || path.hasPrefix("/ws/") {
+                    throw HTTPUnhandledError()
+                }
+                return try await staticFiles.handleRequest(request)
+            }
         }
 
         serverTask = Task {
@@ -369,39 +375,62 @@ public actor JukeboxServer {
     }
 
     public static func localIPAddress() -> String? {
-        var address: String?
+        var addresses: [(name: String, ip: String)] = []
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifaddr) == 0, let first = ifaddr else { return nil }
         defer { freeifaddrs(ifaddr) }
 
         for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let interface = ptr.pointee
+            let flags = Int32(interface.ifa_flags)
+            let isUp = (flags & IFF_UP) != 0
+            let isRunning = (flags & IFF_RUNNING) != 0
+            guard isUp, isRunning else { continue }
+
             let family = interface.ifa_addr.pointee.sa_family
-            if family == UInt8(AF_INET) {
-                let name = String(cString: interface.ifa_name)
-                if name == "en0" || name.hasPrefix("en") {
-                    var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                    getnameinfo(
-                        interface.ifa_addr,
-                        socklen_t(interface.ifa_addr.pointee.sa_len),
-                        &hostname,
-                        socklen_t(hostname.count),
-                        nil,
-                        0,
-                        NI_NUMERICHOST
-                    )
-                    let ip = String(cString: hostname)
-                    if !ip.hasPrefix("127.") {
-                        address = ip
-                    }
-                }
+            guard family == UInt8(AF_INET) else { continue }
+
+            let name = String(cString: interface.ifa_name)
+            var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            getnameinfo(
+                interface.ifa_addr,
+                socklen_t(interface.ifa_addr.pointee.sa_len),
+                &hostname,
+                socklen_t(hostname.count),
+                nil,
+                0,
+                NI_NUMERICHOST
+            )
+            let ip = String(cString: hostname)
+            guard !ip.hasPrefix("127."), !ip.hasPrefix("169.254.") else { continue }
+            addresses.append((name: name, ip: ip))
+        }
+
+        let preferredNames = ["en0", "en1", "wlan0"]
+        for preferred in preferredNames {
+            if let match = addresses.first(where: { $0.name == preferred && isPrivateLAN($0.ip) }) {
+                return match.ip
             }
         }
-        return address
+        if let privateIP = addresses.first(where: { isPrivateLAN($0.ip) })?.ip {
+            return privateIP
+        }
+        return addresses.first?.ip
+    }
+
+    private static func isPrivateLAN(_ ip: String) -> Bool {
+        if ip.hasPrefix("192.168.") || ip.hasPrefix("10.") { return true }
+        if ip.hasPrefix("172.") {
+            let parts = ip.split(separator: ".")
+            if parts.count > 1, let second = Int(parts[1]), (16...31).contains(second) {
+                return true
+            }
+        }
+        return false
     }
 }
 
-private struct StaticWebFilesHandler: HTTPHandler {
+private struct StaticWebFilesHandler: HTTPHandler, Sendable {
     let root: URL
 
     func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -412,17 +441,31 @@ private struct StaticWebFilesHandler: HTTPHandler {
             return HTTPResponse(statusCode: .badRequest)
         }
 
-        let fileURL = root.appendingPathComponent(relativePath)
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory),
-              !isDirectory.boolValue,
+        guard let fileURL = resolveFileURL(relativePath: relativePath),
               let data = try? Data(contentsOf: fileURL) else {
             return HTTPResponse(statusCode: .notFound)
         }
 
         var headers = HTTPHeaders()
         headers[.contentType] = contentType(for: fileURL.pathExtension)
+        headers[HTTPHeader("Cache-Control")] = "no-cache"
         return HTTPResponse(statusCode: .ok, headers: headers, body: data)
+    }
+
+    private func resolveFileURL(relativePath: String) -> URL? {
+        let fm = FileManager.default
+        let direct = root.appendingPathComponent(relativePath)
+        var isDirectory: ObjCBool = false
+        if fm.fileExists(atPath: direct.path, isDirectory: &isDirectory), !isDirectory.boolValue {
+            return direct
+        }
+        if relativePath != "index.html" {
+            let fallback = root.appendingPathComponent("index.html")
+            if fm.fileExists(atPath: fallback.path) {
+                return fallback
+            }
+        }
+        return nil
     }
 
     private func contentType(for ext: String) -> String {

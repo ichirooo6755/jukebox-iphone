@@ -58,40 +58,42 @@ final class AppModel: ObservableObject {
     private var progressTask: Task<Void, Never>?
     private var visualizerTask: Task<Void, Never>?
     private var subscriptionID: UUID?
-    private var webRoot: URL? {
-        Self.resolveWebRoot()
-    }
+    private let resolvedWebRoot: URL?
+
+    private var webRoot: URL? { resolvedWebRoot }
 
     private static func resolveWebRoot() -> URL? {
         let fm = FileManager.default
-        let candidates: [URL] = [
+        var candidates: [URL] = [
             Bundle.main.resourceURL?.appendingPathComponent("web"),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/web"),
-        ].compactMap { $0 } + developmentWebRootCandidates()
+        ].compactMap { $0 }
 
-        for root in candidates {
-            let index = root.appendingPathComponent("index.html")
-            if fm.fileExists(atPath: index.path) {
-                return root
-            }
-        }
-        return nil
-    }
-
-    private static func developmentWebRootCandidates() -> [URL] {
         #if DEBUG
         let sourceFile = URL(fileURLWithPath: #filePath)
         let repoRoot = sourceFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        return [repoRoot.appendingPathComponent("web")]
-        #else
-        return []
+        candidates.append(repoRoot.appendingPathComponent("web"))
         #endif
+
+        for root in candidates {
+            let index = root.appendingPathComponent("index.html")
+            guard fm.isReadableFile(atPath: index.path),
+                  let data = try? Data(contentsOf: index),
+                  !data.isEmpty else { continue }
+            return root
+        }
+        return nil
+    }
+
+    private static func developmentWebRootCandidates() -> [URL] {
+        []
     }
 
     init() {
+        resolvedWebRoot = Self.resolveWebRoot()
         Task { await bootstrap() }
     }
 

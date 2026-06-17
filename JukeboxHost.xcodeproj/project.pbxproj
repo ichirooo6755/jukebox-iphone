@@ -285,7 +285,6 @@
 /* Begin PBXShellScriptBuildPhase section */
 		5EF747802ACCA4B0F4017289 /* Copy Web PWA */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -300,11 +299,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\n";
+			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\n";
 		};
 		AA449CDA5910B7FAD46D6A25 /* Copy Web PWA */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -319,7 +317,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\n";
+			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -44,7 +44,7 @@ targets:
           DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web"
           rm -rf "$DEST"
           ditto "${SRCROOT}/web" "$DEST"
-        basedOnDependencyAnalysis: false
+          rm -rf "$DEST/landing/.netlify"
   JukeboxHostMac:
     type: application
     platform: macOS
@@ -79,7 +79,7 @@ targets:
           DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web"
           rm -rf "$DEST"
           ditto "${SRCROOT}/web" "$DEST"
-        basedOnDependencyAnalysis: false
+          rm -rf "$DEST/landing/.netlify"
 schemes:
   JukeboxHost:
     build:
