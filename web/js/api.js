@@ -1,6 +1,7 @@
 const STORAGE_HOST = 'jukebox_host_url';
 const STORAGE_NICKNAME = 'jukebox_nickname';
 const STORAGE_ONBOARDED = 'jukebox_onboarded';
+const STORAGE_PROFILES = 'jukebox_service_profiles';
 
 let baseURL = localStorage.getItem(STORAGE_HOST) || window.location.origin;
 
@@ -27,6 +28,28 @@ export function isOnboarded() {
 
 export function setOnboarded() {
   localStorage.setItem(STORAGE_ONBOARDED, '1');
+}
+
+export function saveServiceProfiles(statuses) {
+  const map = {};
+  statuses.forEach((status) => {
+    if (status.display_name || status.avatar_url) {
+      map[status.service] = {
+        displayName: status.display_name,
+        avatarURL: status.avatar_url,
+      };
+    }
+  });
+  localStorage.setItem(STORAGE_PROFILES, JSON.stringify(map));
+}
+
+export function getServiceProfile(service) {
+  try {
+    const map = JSON.parse(localStorage.getItem(STORAGE_PROFILES) || '{}');
+    return map[service] || null;
+  } catch {
+    return null;
+  }
 }
 
 export function normalizeArtworkURL(url) {
@@ -95,6 +118,21 @@ export const api = {
   importPlaylist: (service, playlistID, addedBy, limit = 50) => request('/api/playlists/import', {
     method: 'POST',
     body: JSON.stringify({ service, playlist_id: playlistID, added_by: addedBy, limit }),
+  }),
+  resolvePlaylistURL: (url, participant = getNickname()) =>
+    request(withParticipant('/api/playlists/resolve-url', participant), {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
+  addPlaylistLane: (payload) => request('/api/playlist-lanes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  removePlaylistLane: (id) => request(`/api/playlist-lanes/${id}`, { method: 'DELETE' }),
+  playbackMode: () => request('/api/playback-mode'),
+  setPlaybackMode: (mode) => request('/api/playback-mode', {
+    method: 'PUT',
+    body: JSON.stringify({ mode }),
   }),
   importArtist: (service, artistID, addedBy, limit = 5) => request('/api/artists/import', {
     method: 'POST',

@@ -27,88 +27,100 @@ struct HostSetupView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 24)
-
-                Image(systemName: "music.note.house.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.pink.gradient)
-
-                VStack(spacing: 8) {
-                    Text("Jukebox Host")
-                        .font(.largeTitle.bold())
-                    Text("常設 \(hostDeviceLabel) をホストとして起動し、\n参加者は同じ Wi-Fi からアクセスします")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "music.note.house.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.pink.gradient)
+                        Text("Jukebox Host")
+                            .font(.title.bold())
+                        Text("常設 \(hostDeviceLabel) をホストとして起動し、参加者は同じ Wi-Fi からアクセスします")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
                 }
 
                 if let url = model.participantURL {
-                    ParticipantQRCodeCard(
-                        url: url,
-                        localURL: model.participantLocalURL,
-                        qrSize: 180
-                    )
+                    Section("参加用 QR") {
+                        ParticipantQRCodeCard(
+                            url: url,
+                            localURL: model.participantLocalURL,
+                            qrSize: 180
+                        )
+                        .listRowInsets(EdgeInsets())
+                    }
                 } else if let localURL = model.participantLocalURL {
-                    ParticipantQRCodeCard(url: localURL, qrSize: 180)
+                    Section("参加用 QR") {
+                        ParticipantQRCodeCard(url: localURL, qrSize: 180)
+                            .listRowInsets(EdgeInsets())
+                    }
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Label(
-                        model.musicAuthorized ? "Apple Music 利用可能" : "Apple Music の許可が必要です",
-                        systemImage: model.musicAuthorized ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(model.musicAuthorized ? .green : .orange)
-
-                    Label(model.audioOutput.statusLine, systemImage: model.audioOutput.isHeadphoneConnected ? "headphones" : "speaker.wave.2")
-
+                Section("状態") {
+                    LabeledContent("Apple Music", value: model.musicAuthorized ? "利用可能" : "許可が必要")
+                    LabeledContent("音声出力", value: model.audioOutput.routeDetail)
                     if model.participantURL == nil {
                         if let ip = JukeboxServer.localIPAddress() {
-                            Label("ネットワーク: \(ip)", systemImage: "wifi")
+                            LabeledContent("ネットワーク", value: ip)
                         } else {
-                            Label("ネットワークに接続してください", systemImage: "wifi.slash")
-                                .foregroundStyle(.orange)
+                            LabeledContent("ネットワーク", value: "未接続")
                         }
                     }
+                }
 
+                Section("出力") {
                     Text(outputNote)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    Text("YouTube は参加者ごとにログインします。Spotify はホスト共有です。")
+                    #if os(iOS)
+                    HStack {
+                        Text("AirPlay / Bluetooth / 有線")
+                        Spacer()
+                        AudioRoutePickerView(tint: .secondaryLabel)
+                            .frame(width: 32, height: 32)
+                    }
+                    #elseif os(macOS)
+                    Button("サウンド設定を開く") {
+                        MacAudioDevice.openSoundSettings()
+                    }
+                    #endif
+                    Text("YouTube / Spotify は参加者ごとにログイン。Apple Music はホスト共有です。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
 
-                Button {
-                    Task { await model.startHostServer() }
-                } label: {
-                    Text(model.isServerRunning ? "サーバーを再起動" : "サーバーを起動")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                Section {
+                    Button {
+                        Task { await model.startHostServer() }
+                    } label: {
+                        Text(model.isServerRunning ? "サーバーを再起動" : "サーバーを起動")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.pink)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+
+                    if let error = model.errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.pink)
-
-                if let error = model.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-
-                Spacer(minLength: 24)
             }
-            .padding(24)
-            .frame(maxWidth: 640)
-            .frame(maxWidth: .infinity)
+            .navigationTitle("セットアップ")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
         #if os(macOS)
         .frame(minWidth: 480, minHeight: 560)
+        .onAppear { model.audioOutput.refreshMacOutput() }
         #endif
     }
 }

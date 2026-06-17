@@ -44,6 +44,7 @@ final class HostLifecycleManager {
                 guard let self else { return }
                 let connected = path.status == .satisfied
                 if connected, !self.wasConnected {
+                    HostDurabilityLog.record("network_restored")
                     await onNetworkRestored()
                 }
                 self.wasConnected = connected
@@ -103,8 +104,24 @@ final class HostLifecycleManager {
         watchdogTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
+                HostDurabilityLog.record("watchdog_tick")
                 await onServerRestartNeeded?()
             }
         }
+    }
+}
+
+enum HostDurabilityLog {
+    private static let key = "jukebox.durability.events"
+
+    static func record(_ event: String) {
+        var events = load()
+        events.append("\(ISO8601DateFormatter().string(from: Date())) \(event)")
+        if events.count > 200 { events.removeFirst(events.count - 200) }
+        UserDefaults.standard.set(events, forKey: key)
+    }
+
+    static func load() -> [String] {
+        UserDefaults.standard.stringArray(forKey: key) ?? []
     }
 }

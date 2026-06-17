@@ -19,9 +19,16 @@ struct VolumeSliderView: View {
         HStack(spacing: 8) {
             Image(systemName: "speaker.wave.2.fill")
                 .foregroundStyle(.white.opacity(0.7))
-            Text("音量はキーボードまたはメニューバーの音量で調整")
+            Text("音量はメニューバーの音量キーまたはサウンド設定で調整")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
+            Spacer()
+            Button("サウンド設定") {
+                MacAudioDevice.openSoundSettings()
+            }
+            .font(.caption)
+            .buttonStyle(.borderless)
+            .foregroundStyle(.white.opacity(0.8))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

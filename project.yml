@@ -80,6 +80,21 @@ targets:
           rm -rf "$DEST"
           ditto "${SRCROOT}/web" "$DEST"
           rm -rf "$DEST/landing/.netlify"
+  JukeboxGuest:
+    type: application
+    platform: iOS
+    sources:
+      - JukeboxGuest
+    dependencies:
+      - package: JukeboxCore
+        product: JukeboxCore
+    settings:
+      base:
+        INFOPLIST_FILE: JukeboxGuest/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.ichirooo6755.jukebox.guest
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        ENABLE_PREVIEWS: YES
 schemes:
   JukeboxHost:
     build:
@@ -99,6 +114,20 @@ schemes:
     build:
       targets:
         JukeboxHostMac: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  JukeboxGuest:
+    build:
+      targets:
+        JukeboxGuest: all
     run:
       config: Debug
     test:

@@ -115,6 +115,10 @@ public struct NowPlayingState: Codable, Sendable, Equatable {
     public var queue: [QueueItem]
     public var skipVote: SkipVoteState
     public var connectedClients: Int
+    public var playbackMode: QueuePlaybackMode
+    public var playlistLanes: [PlaylistLane]
+    public var lastRouletteParticipant: String?
+    public var sessionStartedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case current, elapsed
@@ -122,6 +126,10 @@ public struct NowPlayingState: Codable, Sendable, Equatable {
         case queue
         case skipVote = "skip_vote"
         case connectedClients = "connected_clients"
+        case playbackMode = "playback_mode"
+        case playlistLanes = "playlist_lanes"
+        case lastRouletteParticipant = "last_roulette_participant"
+        case sessionStartedAt = "session_started_at"
     }
 
     public init(
@@ -130,7 +138,11 @@ public struct NowPlayingState: Codable, Sendable, Equatable {
         isPlaying: Bool,
         queue: [QueueItem],
         skipVote: SkipVoteState = .empty,
-        connectedClients: Int = 0
+        connectedClients: Int = 0,
+        playbackMode: QueuePlaybackMode = .singleTrack,
+        playlistLanes: [PlaylistLane] = [],
+        lastRouletteParticipant: String? = nil,
+        sessionStartedAt: Date? = nil
     ) {
         self.current = current
         self.elapsed = elapsed
@@ -138,6 +150,10 @@ public struct NowPlayingState: Codable, Sendable, Equatable {
         self.queue = queue
         self.skipVote = skipVote
         self.connectedClients = connectedClients
+        self.playbackMode = playbackMode
+        self.playlistLanes = playlistLanes
+        self.lastRouletteParticipant = lastRouletteParticipant
+        self.sessionStartedAt = sessionStartedAt
     }
 
     public static let empty = NowPlayingState(current: nil, elapsed: 0, isPlaying: false, queue: [])
@@ -272,6 +288,8 @@ public struct ServiceAuthStatus: Codable, Sendable {
     public var isAuthenticated: Bool
     public var loginURL: String?
     public var message: String
+    public var displayName: String?
+    public var avatarURL: String?
 
     enum CodingKeys: String, CodingKey {
         case service
@@ -279,6 +297,8 @@ public struct ServiceAuthStatus: Codable, Sendable {
         case isAuthenticated = "is_authenticated"
         case loginURL = "login_url"
         case message
+        case displayName = "display_name"
+        case avatarURL = "avatar_url"
     }
 
     public init(
@@ -286,13 +306,17 @@ public struct ServiceAuthStatus: Codable, Sendable {
         isConfigured: Bool,
         isAuthenticated: Bool,
         loginURL: String?,
-        message: String
+        message: String,
+        displayName: String? = nil,
+        avatarURL: String? = nil
     ) {
         self.service = service
         self.isConfigured = isConfigured
         self.isAuthenticated = isAuthenticated
         self.loginURL = loginURL
         self.message = message
+        self.displayName = displayName
+        self.avatarURL = avatarURL
     }
 }
 
@@ -322,6 +346,13 @@ public struct PlaylistImportRequest: Codable, Sendable {
         case addedBy = "added_by"
         case limit
     }
+
+    public init(service: MusicService, playlistID: String, addedBy: String, limit: Int) {
+        self.service = service
+        self.playlistID = playlistID
+        self.addedBy = addedBy
+        self.limit = limit
+    }
 }
 
 public struct ReorderRequest: Codable, Sendable {
@@ -334,6 +365,10 @@ public struct ReorderRequest: Codable, Sendable {
 
 public struct NicknameRequest: Codable, Sendable {
     public var nickname: String
+
+    public init(nickname: String) {
+        self.nickname = nickname
+    }
 }
 
 public struct HostServerStatus: Codable, Sendable {

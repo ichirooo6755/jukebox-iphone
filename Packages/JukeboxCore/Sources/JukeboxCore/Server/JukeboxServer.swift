@@ -291,6 +291,44 @@ public actor JukeboxServer {
             return try await self.jsonResponse(added, status: .created)
         }
 
+        await http.appendRoute("POST /api/playlists/resolve-url") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let resolveRequest = try self.decoder.decode(PlaylistURLResolveRequest.self, from: body)
+            let participant = Self.participant(from: request)
+            if let summary = await SearchCoordinator.shared.resolvePlaylistURL(resolveRequest.url, participant: participant) {
+                return try await self.jsonResponse(summary)
+            }
+            return HTTPResponse(statusCode: .badRequest, body: Data("unsupported or invalid playlist url".utf8))
+        }
+
+        await http.appendRoute("GET /api/playback-mode") { [weak self] _ in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            return try await self.jsonResponse(await self.store.playlistRouletteState())
+        }
+
+        await http.appendRoute("PUT /api/playback-mode") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let modeRequest = try self.decoder.decode(PlaybackModeRequest.self, from: body)
+            await self.store.setPlaybackMode(modeRequest.mode)
+            return try await self.jsonResponse(await self.store.playlistRouletteState())
+        }
+
+        await http.appendRoute("POST /api/playlist-lanes") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let importRequest = try self.decoder.decode(PlaylistLaneImportRequest.self, from: body)
+            let lane = try await self.store.addPlaylistLane(importRequest)
+            return try await self.jsonResponse(lane, status: .created)
+        }
+
+        await http.appendRoute("DELETE /api/playlist-lanes/:id") { [weak self] (_: HTTPRequest, id: String) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            try await self.store.removePlaylistLane(id: id)
+            return HTTPResponse(statusCode: .noContent)
+        }
+
         await http.appendRoute("GET /ws", to: .webSocket(wsHandler))
 
         if let webRoot {

@@ -27,3 +27,8 @@ Config.xcconfig
 
 # Netlify local link state
 web/landing/.netlify/
+
+# Python venv (pi-server)
+pi-server/.venv/
+pi-server/__pycache__/
+*.pyc

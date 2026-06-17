@@ -56,6 +56,10 @@ final class AudioOutputManager: ObservableObject {
                 isHeadphoneConnected = false
                 routeLabel = "Bluetooth"
                 routeDetail = output.portName
+            case .airPlay:
+                isHeadphoneConnected = false
+                routeLabel = "AirPlay"
+                routeDetail = output.portName
             case .builtInSpeaker:
                 isHeadphoneConnected = false
                 routeLabel = "スピーカー"
@@ -69,12 +73,19 @@ final class AudioOutputManager: ObservableObject {
     }
     #else
     init() {
-        routeLabel = "Mac 出力"
-        routeDetail = "システムの既定オーディオ出力"
-        isHeadphoneConnected = false
+        refreshMacOutput()
     }
 
-    func configureSession() {}
+    func configureSession() {
+        refreshMacOutput()
+    }
+
+    func refreshMacOutput() {
+        routeLabel = "Mac 出力"
+        routeDetail = MacAudioDevice.defaultOutputName()
+        isHeadphoneConnected = routeDetail.localizedCaseInsensitiveContains("headphone")
+            || routeDetail.localizedCaseInsensitiveContains("ヘッド")
+    }
     #endif
 
     var statusLine: String {

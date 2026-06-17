@@ -26,7 +26,7 @@ public actor SearchCoordinator {
         case .appleMusic:
             return await appleMusicSearcher?.search(query: trimmed) ?? []
         case .spotify:
-            return await SpotifySearchService.shared.search(query: trimmed)
+            return await SpotifySearchService.shared.search(query: trimmed, participant: participant)
         case .youtube:
             return await YouTubeSearchService.shared.search(query: trimmed, participant: participant)
         }
@@ -41,7 +41,7 @@ public actor SearchCoordinator {
                 loginURL: nil,
                 message: "ホストの MusicKit で再生（参加者は曲IDを送信）"
             ),
-            await SpotifySearchService.shared.authStatus(baseURL: baseURL),
+            await SpotifySearchService.shared.authStatus(baseURL: baseURL, participant: participant),
             await YouTubeSearchService.shared.authStatus(baseURL: baseURL, participant: participant)
         ]
     }
@@ -56,7 +56,11 @@ public actor SearchCoordinator {
         case .appleMusic:
             return nil
         case .spotify:
-            return await SpotifySearchService.shared.beginAuthorization(baseURL: baseURL, returnTo: returnTo)
+            return await SpotifySearchService.shared.beginAuthorization(
+                baseURL: baseURL,
+                participant: participant,
+                returnTo: returnTo
+            )
         case .youtube:
             return await YouTubeSearchService.shared.beginAuthorization(
                 baseURL: baseURL,
@@ -85,7 +89,7 @@ public actor SearchCoordinator {
         case .appleMusic:
             return await appleMusicSearcher?.searchPlaylists(query: trimmed) ?? []
         case .spotify:
-            return await SpotifySearchService.shared.searchPlaylists(query: trimmed)
+            return await SpotifySearchService.shared.searchPlaylists(query: trimmed, participant: participant)
         case .youtube:
             return await YouTubeSearchService.shared.searchPlaylists(query: trimmed, participant: participant)
         }
@@ -152,11 +156,42 @@ public actor SearchCoordinator {
         case .appleMusic:
             return await appleMusicSearcher?.playlistTracks(playlistID: playlistID, limit: limit) ?? []
         case .spotify:
-            return await SpotifySearchService.shared.playlistTracks(playlistID: playlistID, limit: limit)
+            return await SpotifySearchService.shared.playlistTracks(
+                playlistID: playlistID,
+                limit: limit,
+                participant: participant
+            )
         case .youtube:
             return await YouTubeSearchService.shared.playlistTracks(
                 playlistID: playlistID,
                 limit: limit,
+                participant: participant
+            )
+        }
+    }
+
+    public func resolvePlaylistURL(_ raw: String, participant: String? = nil) async -> PlaylistSummary? {
+        guard let parsed = PlaylistURLParser.parse(raw) else { return nil }
+        switch parsed.service {
+        case .appleMusic:
+            let tracks = await appleMusicSearcher?.playlistTracks(playlistID: parsed.playlistID, limit: 1) ?? []
+            guard !tracks.isEmpty else { return nil }
+            return PlaylistSummary(
+                id: parsed.playlistID,
+                title: tracks.first?.title ?? "Apple Music Playlist",
+                owner: "Apple Music",
+                artworkURL: tracks.first?.artworkURL,
+                service: .appleMusic,
+                trackCount: nil
+            )
+        case .spotify:
+            return await SpotifySearchService.shared.fetchPlaylist(
+                playlistID: parsed.playlistID,
+                participant: participant
+            )
+        case .youtube:
+            return await YouTubeSearchService.shared.fetchPlaylist(
+                playlistID: parsed.playlistID,
                 participant: participant
             )
         }

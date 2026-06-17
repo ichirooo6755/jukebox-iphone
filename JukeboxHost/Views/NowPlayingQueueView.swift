@@ -62,6 +62,15 @@ struct NowPlayingQueueView: View {
             queueSection
                 .frame(maxHeight: queueHeight)
 
+            if model.playbackState.playbackMode == .playlistRoulette {
+                PlaylistGraphView(
+                    playbackMode: model.playbackState.playbackMode,
+                    lanes: model.playbackState.playlistLanes,
+                    lastWinner: model.playbackState.lastRouletteParticipant,
+                    sessionStartedAt: model.playbackState.sessionStartedAt
+                )
+            }
+
             footerBar
 
             if topInset > 0 {
@@ -213,11 +222,18 @@ struct NowPlayingQueueView: View {
     }
 
     private var footerBar: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: model.playbackState.isPlaying ? "waveform" : "pause.circle")
                 Text(model.playbackState.isPlaying ? "再生中" : "停止中")
                 Spacer()
+                #if os(iOS)
+                AudioRoutePickerView(tint: .white.withAlphaComponent(0.8))
+                    .frame(width: 28, height: 28)
+                #else
+                AudioRoutePickerView()
+                    .frame(width: 28, height: 28)
+                #endif
                 Image(systemName: model.audioOutput.isHeadphoneConnected ? "headphones" : "speaker.wave.2.fill")
             }
             .font(.caption)
@@ -226,6 +242,19 @@ struct NowPlayingQueueView: View {
             Text(model.audioOutput.routeDetail)
                 .font(.caption2)
                 .foregroundColor(.white.opacity(0.4))
+
+            #if os(iOS)
+            Text("AirPlay / Bluetooth / 有線出力は右のアイコンから選択")
+                .font(.caption2)
+                .foregroundColor(.white.opacity(0.35))
+            #elseif os(macOS)
+            Text("出力デバイスはサウンド設定または右のアイコンから変更")
+                .font(.caption2)
+                .foregroundColor(.white.opacity(0.35))
+            #endif
+
+            VolumeSliderView()
+                .frame(height: 28)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

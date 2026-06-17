@@ -4,7 +4,9 @@ import {
   ensureParticipant,
   getBaseURL,
   getNickname,
+  getServiceProfile,
   isOnboarded,
+  saveServiceProfiles,
   setBaseURL,
   setNickname,
   setOnboarded,
@@ -19,6 +21,10 @@ const state = {
   skipVote: { votes: 0, required: 2, voters: [] },
   searchType: 'tracks',
   useUnifiedSearch: true,
+  playbackMode: 'single_track',
+  playlistLanes: [],
+  lastRouletteParticipant: null,
+  sessionStartedAt: null,
 };
 
 const els = {
@@ -40,6 +46,9 @@ const els = {
   searchService: document.getElementById('search-service'),
   searchResults: document.getElementById('search-results'),
   searchTypeSegments: document.getElementById('search-type-segments'),
+  playlistGraph: document.getElementById('playlist-graph'),
+  playlistUrlInput: document.getElementById('playlist-url-input'),
+  playlistUrlImport: document.getElementById('playlist-url-import'),
   queueList: document.getElementById('queue-list'),
   nickname: document.getElementById('nickname'),
   hostUrl: document.getElementById('host-url'),
@@ -90,6 +99,12 @@ function applyState(payload) {
   state.elapsed = payload.elapsed || 0;
   state.isPlaying = payload.is_playing;
   state.skipVote = payload.skip_vote || { votes: 0, required: 2, voters: [] };
+  state.playbackMode = payload.playback_mode || 'single_track';
+  state.playlistLanes = payload.playlist_lanes || [];
+  state.lastRouletteParticipant = payload.last_roulette_participant || null;
+  state.sessionStartedAt = payload.session_started_at || null;
+  syncPlaybackModeUI();
+  renderPlaylistGraph();
   renderNowPlaying(prevId !== state.nowPlaying?.music_id);
   renderQueue();
 }
@@ -206,10 +221,126 @@ function updateSearchMode() {
   }
 }
 
+function marqueeHTML(text) {
+  const safe = escapeHtml(text);
+  return `<div class="marquee" data-text="${safe}"><span class="marquee-text">${safe}</span></div>`;
+}
+
+function syncPlaybackModeUI() {
+  document.querySelectorAll('[data-playback-mode]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.playbackMode === state.playbackMode);
+  });
+  if (els.playlistGraph) {
+    els.playlistGraph.hidden = state.playbackMode !== 'playlist_roulette';
+  }
+}
+
+function renderPlaylistGraph() {
+  if (!els.playlistGraph) return;
+  if (state.playbackMode !== 'playlist_roulette') {
+    els.playlistGraph.innerHTML = '';
+    return;
+  }
+
+  const lanes = state.playlistLanes || [];
+  if (!lanes.length) {
+    els.playlistGraph.innerHTML = '<p class="muted graph-empty">Search からプレイリストを追加すると、ここに参加者ごとのレーンが表示されます。</p>';
+    return;
+  }
+
+  const winner = state.lastRouletteParticipant;
+  const sessionStart = state.sessionStartedAt
+    ? new Date(state.sessionStartedAt).getTime()
+    : Math.min(...lanes.map((lane) => new Date(lane.joined_at).getTime()));
+  const sorted = [...lanes].sort((a, b) => new Date(a.joined_at) - new Date(b.joined_at));
+
+  els.playlistGraph.innerHTML = `
+    <div class="graph-header">
+      <h3>プレイリストルーレット</h3>
+      <p class="muted">次の曲は ${lanes.filter((lane) => lane.position < lane.tracks.length).length} 人中からランダム抽選</p>
+    </div>
+    <div class="graph-trunk" aria-hidden="true"></div>
+    <div class="graph-lanes">
+      ${sorted.map((lane) => {
+        const joinedAt = new Date(lane.joined_at).getTime();
+        const isBranch = joinedAt - sessionStart > 3000;
+        const active = lane.position < lane.tracks.length;
+        const current = lane.tracks[lane.position];
+        const avatar = lane.avatar_url
+          ? `<img class="lane-avatar" src="${escapeHtml(lane.avatar_url)}" alt="">`
+          : `<span class="lane-avatar placeholder">${escapeHtml((lane.display_name || lane.participant || '?').slice(0, 1))}</span>`;
+        return `
+          <div class="graph-lane ${active ? 'active' : 'done'} ${isBranch ? 'branch' : 'trunk'} ${winner === lane.participant ? 'winner' : ''}" style="--lane-color:${lane.color}">
+            ${isBranch ? '<div class="graph-merge"><span>途中参加</span></div>' : ''}
+            <div class="lane-head">
+              ${avatar}
+              <div class="lane-meta">
+                <strong>${escapeHtml(lane.display_name || lane.participant)}</strong>
+                ${marqueeHTML(lane.playlist_title)}
+              </div>
+            </div>
+            <div class="lane-rail">
+              ${lane.tracks.map((track, index) => `
+                <div class="lane-node ${index < lane.position ? 'played' : ''} ${index === lane.position ? 'current' : ''}">
+                  <span class="lane-dot"></span>
+                  ${index === lane.position && current ? marqueeHTML(track.title) : `<span class="lane-track">${escapeHtml(track.title)}</span>`}
+                </div>
+              `).join('')}
+            </div>
+            <p class="lane-progress">${lane.position}/${lane.tracks.length}</p>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  els.playlistGraph.querySelectorAll('.marquee').forEach((node) => {
+    const text = node.querySelector('.marquee-text');
+    if (text && text.scrollWidth > node.clientWidth + 4) {
+      node.classList.add('scroll');
+    }
+  });
+}
+
+function setupPlaybackMode() {
+  document.querySelectorAll('[data-playback-mode]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const mode = button.dataset.playbackMode;
+      if (mode === state.playbackMode) return;
+      try {
+        const next = await api.setPlaybackMode(mode);
+        state.playbackMode = next.mode;
+        state.playlistLanes = next.lanes || [];
+        state.lastRouletteParticipant = next.last_roulette_participant || null;
+        syncPlaybackModeUI();
+        renderPlaylistGraph();
+        showToast(mode === 'playlist_roulette' ? 'プレイリスト選択モード' : '一曲ずつモード');
+      } catch (err) {
+        showToast(`モード変更に失敗: ${err.message}`);
+      }
+    });
+  });
+}
+
 async function addSearchResult(item) {
   const addedBy = getNickname() || await ensureParticipant();
+  const profile = getServiceProfile(item.service);
 
   if (item.kind === 'playlist') {
+    if (state.playbackMode === 'playlist_roulette') {
+      await api.addPlaylistLane({
+        service: item.service,
+        playlist_id: item.id,
+        added_by: addedBy,
+        limit: 50,
+        display_name: profile?.displayName,
+        avatar_url: profile?.avatarURL,
+        playlist_title: item.title,
+        playlist_artwork_url: item.artwork_url,
+      });
+      showToast(`「${item.title}」をルーレットに参加しました`);
+      return;
+    }
     const added = await api.importPlaylist(item.service, item.id, addedBy, 50);
     showToast(`プレイリストを追加しました（${added.length}曲）`);
     return;
@@ -350,6 +481,26 @@ function setupSearch() {
   els.searchService.addEventListener('change', () => {
     updateSearchMode();
     runSearch();
+  });
+
+  els.playlistUrlImport?.addEventListener('click', async () => {
+    const url = els.playlistUrlInput?.value.trim();
+    if (!url) return;
+    try {
+      const summary = await api.resolvePlaylistURL(url);
+      await addSearchResult({
+        kind: 'playlist',
+        service: summary.service,
+        id: summary.id,
+        title: summary.title,
+        artwork_url: summary.artwork_url,
+        owner: summary.owner,
+        track_count: summary.track_count,
+      });
+      if (els.playlistUrlInput) els.playlistUrlInput.value = '';
+    } catch (err) {
+      showToast(`URL から追加できません: ${err.message}`);
+    }
   });
 
   els.togglePlayback.addEventListener('click', async () => {
@@ -494,14 +645,25 @@ async function refreshAuthStatus() {
   try {
     await ensureParticipant();
     const statuses = await api.authStatus();
+    saveServiceProfiles(statuses);
     els.authStatusList.innerHTML = '';
     statuses.forEach((status) => {
       const row = document.createElement('div');
       row.className = 'auth-status-row';
+      const avatar = status.avatar_url
+        ? `<img class="auth-avatar" src="${escapeHtml(status.avatar_url)}" alt="">`
+        : '';
+      const identity = status.display_name
+        ? `<p class="auth-identity">${escapeHtml(status.display_name)}</p>`
+        : '';
       row.innerHTML = `
-        <div>
-          <strong>${serviceLabel(status.service)}</strong>
-          <p>${escapeHtml(status.message)}</p>
+        <div class="auth-status-main">
+          ${avatar}
+          <div>
+            <strong>${serviceLabel(status.service)}</strong>
+            ${identity}
+            <p>${escapeHtml(status.message)}</p>
+          </div>
         </div>
         ${renderAuthAction(status)}
       `;
@@ -542,6 +704,7 @@ async function bootstrap() {
   setupTabs();
   setupAccount();
   setupSearch();
+  setupPlaybackMode();
   setupConnection();
   setupOnboarding();
 

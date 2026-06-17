@@ -19,6 +19,11 @@
 
     <main id="views">
       <section id="view-home" class="view active">
+        <div class="mode-switch segmented-control" aria-label="再生モード">
+          <button class="segment active" data-playback-mode="single_track">一曲ずつ</button>
+          <button class="segment" data-playback-mode="playlist_roulette">プレイリスト選択</button>
+        </div>
+        <div id="playlist-graph" class="playlist-graph" hidden></div>
         <div class="now-playing-card">
           <img id="np-artwork" class="artwork" src="" alt="" hidden>
           <div id="np-artwork-placeholder" class="artwork placeholder">♪</div>
@@ -56,12 +61,16 @@
               <option value="youtube">YouTube</option>
             </select>
           </div>
+          <div class="playlist-url-row">
+            <input id="playlist-url-input" type="url" placeholder="プレイリスト URL を貼り付け（Spotify / YouTube / Apple Music）" autocomplete="off">
+            <button type="button" id="playlist-url-import" class="btn">URLから追加</button>
+          </div>
         </div>
         <ul id="search-results" class="result-list"></ul>
       </section>
 
       <section id="view-queue" class="view">
-        <p class="hint">ドラッグで並び替え · スワイプで削除</p>
+        <p class="hint">ドラッグで並び替え · × ボタンで削除</p>
         <ul id="queue-list" class="queue-list"></ul>
       </section>
 

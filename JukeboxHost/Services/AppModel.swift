@@ -87,10 +87,6 @@ final class AppModel: ObservableObject {
         return nil
     }
 
-    private static func developmentWebRootCandidates() -> [URL] {
-        []
-    }
-
     init() {
         resolvedWebRoot = Self.resolveWebRoot()
         Task { await bootstrap() }
@@ -176,6 +172,7 @@ final class AppModel: ObservableObject {
 
     func restartServerIfNeeded() async {
         guard isServerRunning else { return }
+        if await isServerHealthy() { return }
         let wasPlaying = playbackState.isPlaying
         await server?.stop()
         let jukeboxServer = JukeboxServer(store: store, webRoot: webRoot)
@@ -200,12 +197,6 @@ final class AppModel: ObservableObject {
 
     func togglePlayback() async {
         try? await store.togglePlayback()
-    }
-
-    func cycleDisplayMode() {
-        let modes = HostDisplayMode.allCases
-        guard let idx = modes.firstIndex(of: displayMode) else { return }
-        displayMode = modes[(idx + 1) % modes.count]
     }
 
     private func refreshStatus() async {
@@ -256,5 +247,20 @@ final class AppModel: ObservableObject {
         withAnimation(.easeOut(duration: 0.35)) { crossfadeOpacity = 0.3 }
         try? await Task.sleep(nanoseconds: 350_000_000)
         withAnimation(.easeIn(duration: 0.35)) { crossfadeOpacity = 1.0 }
+    }
+
+    private func isServerHealthy() async -> Bool {
+        let ip = JukeboxServer.localIPAddress() ?? "127.0.0.1"
+        let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
+        guard let url = URL(string: "http://\(ip):\(port)/api/health") else { return false }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 3
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse,
+              http.statusCode == 200,
+              String(data: data, encoding: .utf8) == "ok" else {
+            return false
+        }
+        return true
     }
 }

@@ -1,5 +1,35 @@
 # マルチストリーミング・ジュークボックス
 
+## このプロジェクトについて
+
+**Jukebox** は、常設の iPhone / iPad / Mac を「ホスト」として置き、同じ Wi-Fi にいる参加者がスマホの Web アプリ（PWA）から曲やプレイリストをキューに入れ、みんなで聴く**民主的ジュークボックス**です。
+
+### 何ができるか
+
+- **ホスト**が Apple Music / Spotify / YouTube を再生し、スピーカーやイヤホンに出力
+- **参加者**は QR コードまたは LAN URL で参加し、検索してキューに追加
+- **スキップ投票**で過半数が同意すると次の曲へ
+- **2つの再生モード**
+  - **一曲ずつ** — 従来どおりキューに1曲ずつ追加
+  - **プレイリスト選択** — 自分のプレイリストを登録し、複数人がいるときは 1/N ルーレットで次の曲を決定（git tree 風 UI で進捗表示）
+
+### 誰が何をするか
+
+| 役割 | 端末 | やること |
+|------|------|----------|
+| ホスト | 常設 iPhone/iPad/Mac | アプリ起動・再生・QR 表示 |
+| 参加者 | 任意のスマホ | PWA または **JukeboxGuest** アプリで名前入力・検索・キュー編集 |
+
+### 技術の要点
+
+- サーバーはホスト内蔵（ポート `8765`）、WebSocket でリアルタイム同期
+- Spotify / YouTube の OAuth は LAN IP 不可のため **Netlify HTTPS** をコールバック専用に使用
+- Apple Music はホストの MusicKit 許可で全員がカタログ検索を共有
+
+タスクの進捗は `docs/todo.md`（**削除しない永続台帳**）、要件との突合は `docs/TRACEABILITY.md` を参照してください。ラズパイ構成は `docs/RASPBERRY_PI.md`、24h 耐久試験は `docs/durability-test.md` です。
+
+---
+
 民主的ジュークボックスの **Phase 1〜6** 実装です。常設 iPhone / iPad / Mac がホストとなり、参加者は同一 Wi-Fi 上の PWA からキューを編集します。
 
 リポジトリ: [github.com/ichirooo6755/jukebox-iphone](https://github.com/ichirooo6755/jukebox-iphone)
@@ -39,6 +69,15 @@
 | Wi-Fi 切断・自動サーバー復旧 | ✅ |
 | 24時間常時稼働（スリープ無効化） | ✅ |
 | 参加者 PWA | ✅ |
+| ゲストネイティブアプリ（JukeboxGuest） | ✅ |
+| 一曲ずつ / プレイリスト選択モード | ✅ |
+| プレイリスト URL 直貼りインポート | ✅ |
+| git tree 風ルーレット UI（途中参加マージ） | ✅ |
+| OAuth プロフィール（名前・アイコン）永続化 | ✅ |
+| Spotify / YouTube 参加者ごと OAuth | ✅ |
+| ホスト音声出力選択（AirPlay/BT/有線/Mac） | ✅ |
+| ラズパイ構成ガイド + pi-server スキャフォールド | ✅ |
+| Phase 6 耐久ログ・試験手順書 | 🟡 ログ実装済み・24h 試験は手動 |
 
 ## セットアップ
 
@@ -59,6 +98,14 @@ open JukeboxHost.xcodeproj
 1. Scheme: **JukeboxHostMac** を選択
 2. Run（⌘R）で起動
 3. 参加者用 URL が画面左下・QR に表示される（コピー可）
+4. 音声出力は **サウンド設定** から変更（再生画面のアイコンでも開けます）
+
+### ゲストアプリ（JukeboxGuest）
+
+1. Scheme: **JukeboxGuest** を選択
+2. Account タブでホスト URL（例: `http://192.168.1.10:8765`）を入力して接続
+3. Search タブでプレイリスト URL を貼り付けて追加
+4. Spotify / YouTube は Account タブからログイン（参加者ごとに分離）
 
 ### 参加者（1回の QR スキャンで完結）
 

@@ -9,21 +9,29 @@
 /* Begin PBXBuildFile section */
 		040A969194601A066427801A /* AudioOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */; };
 		04C2255474BAC438AC711B2E /* Secrets.plist.example in Resources */ = {isa = PBXBuildFile; fileRef = 6A144FF3B00552ADB516C0F7 /* Secrets.plist.example */; };
+		053017EE09D4F67C7CAB8D49 /* GuestRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FBF7F6C919783DFB3A7FCE /* GuestRootView.swift */; };
 		0C37314C1497994C229C85CA /* Secrets.plist.example in Resources */ = {isa = PBXBuildFile; fileRef = 6A144FF3B00552ADB516C0F7 /* Secrets.plist.example */; };
 		0C3B95E04B873BE9E8E441D8 /* VolumeSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */; };
 		1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
 		14358B7D143D27E2DA380150 /* SecretsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E263C4E3B2D5D3511FF5F0 /* SecretsLoader.swift */; };
 		16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3A24E9219C55EB44606CBD /* HostSetupView.swift */; };
+		1D2D8D01C5FA7F0483B5560C /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = CF3E1C83C640BF187690724D /* JukeboxCore */; };
 		1E1D3C7D23EB8746CDD3A85C /* DisplayContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C89E1C53664B063BB6595D /* DisplayContainerView.swift */; };
 		2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */; };
 		34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */; };
 		353A2E4AF0D08E7AEFD5C58D /* NowPlayingQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */; };
+		3FBB9FFBBDB40E7090FF572A /* MacAudioDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */; };
 		419C3F9BF4FE1078CDD11DA7 /* AppleMusicSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */; };
 		45093F018F6C63C5444867FE /* SecretsLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E263C4E3B2D5D3511FF5F0 /* SecretsLoader.swift */; };
 		45988ABEBBD56BE353F686D2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
+		47C3C44D7249AF2AE4BDCE2C /* AudioRoutePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */; };
 		4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */; };
 		4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
+		4D999A22C4D233473C70366A /* AudioRoutePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */; };
+		52DC215FD87393D90054C96F /* PlaylistGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */; };
+		56D9595B562CBA2EA46E7A3D /* JukeboxGuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D40C79331A5544DECC79525 /* JukeboxGuestApp.swift */; };
 		58B93B7C7B767FD8B59A752D /* HostArtworkURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */; };
+		59A215C9D79B4488F036DCD0 /* GuestAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FBA426605DB90C9B675611 /* GuestAPIClient.swift */; };
 		5AD776BB85703FB4B8B73D6F /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F0C0CE53A967E878430EFF3 /* Secrets.plist */; };
 		5E249584284CD11042B155E6 /* AudioOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */; };
 		715668ACD5BF1B7E25676762 /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = BF9CD71DF3BDE171CF411004 /* JukeboxCore */; };
@@ -33,6 +41,7 @@
 		7B91F9048632A7CDFF8D6ED5 /* PlatformServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */; };
 		9CEB6B7CEF8E19DB5D0EC291 /* ParticipantQRCodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */; };
 		9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
+		A2F6C0EAED9372F50ACB1104 /* PlaylistGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */; };
 		AC66F6660A0426C980A73960 /* PlatformServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */; };
 		AE1785FDB98710B8B6B69222 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F0C0CE53A967E878430EFF3 /* Secrets.plist */; };
 		B20D7D93DD474D16407F767E /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05EBA0EAD856983B956699A /* AppModel.swift */; };
@@ -49,6 +58,7 @@
 		E991864E7249943C4F33AA6B /* VolumeSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */; };
 		EB804B6174FE48FCBBBE1E5C /* AppleMusicArtworkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */; };
 		F0EBB575F4D6DA4E50EE995C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A4B91373407D416ADD043C /* RootView.swift */; };
+		F88208F4F38361E7D0427BE2 /* MacAudioDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,15 +73,23 @@
 		42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicArtworkResolver.swift; sourceTree = "<group>"; };
 		4544CC765927F57F23C43B73 /* JukeboxHost.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JukeboxHost.entitlements; sourceTree = "<group>"; };
 		4F0C0CE53A967E878430EFF3 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
+		584D7A6186E6DED4A7E93EEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		68FBA426605DB90C9B675611 /* GuestAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestAPIClient.swift; sourceTree = "<group>"; };
 		6A144FF3B00552ADB516C0F7 /* Secrets.plist.example */ = {isa = PBXFileReference; path = Secrets.plist.example; sourceTree = "<group>"; };
 		74C89E1C53664B063BB6595D /* DisplayContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayContainerView.swift; sourceTree = "<group>"; };
 		7C3A24E9219C55EB44606CBD /* HostSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSetupView.swift; sourceTree = "<group>"; };
+		7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistGraphView.swift; sourceTree = "<group>"; };
+		8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAudioDevice.swift; sourceTree = "<group>"; };
+		9D40C79331A5544DECC79525 /* JukeboxGuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JukeboxGuestApp.swift; sourceTree = "<group>"; };
 		A0BBCB3191CC98BFFD48F0F9 /* JukeboxCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JukeboxCore; path = Packages/JukeboxCore; sourceTree = SOURCE_ROOT; };
 		B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostLifecycleManager.swift; sourceTree = "<group>"; };
+		B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRoutePickerView.swift; sourceTree = "<group>"; };
 		B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformServices.swift; sourceTree = "<group>"; };
 		C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutputManager.swift; sourceTree = "<group>"; };
 		CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingQueueView.swift; sourceTree = "<group>"; };
+		CFF94C306D240CE37F6199A9 /* JukeboxGuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JukeboxGuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05EBA0EAD856983B956699A /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		D0FBF7F6C919783DFB3A7FCE /* GuestRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestRootView.swift; sourceTree = "<group>"; };
 		D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantQRCodeSheet.swift; sourceTree = "<group>"; };
 		DC0AEE57CC25CC69BA3C5B36 /* AppleMusicSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicSearchService.swift; sourceTree = "<group>"; };
 		E9EAA686D913B2F780541A3F /* JukeboxHostMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JukeboxHostMac.entitlements; sourceTree = "<group>"; };
@@ -89,6 +107,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6964637477BD2DF6BA06866A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D2D8D01C5FA7F0483B5560C /* JukeboxCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		ACDA71C619F05C2A51CB7468 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -100,6 +126,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		091009455BF341618B977C27 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D0FBF7F6C919783DFB3A7FCE /* GuestRootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		1E3A04A77FCB236B5E1C934F /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -109,6 +143,7 @@
 				C9852F85F6C1F415265B3A60 /* AudioOutputManager.swift */,
 				21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */,
 				B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */,
+				8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */,
 				B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */,
 				1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */,
 				01E263C4E3B2D5D3511FF5F0 /* SecretsLoader.swift */,
@@ -124,9 +159,18 @@
 			path = Packages;
 			sourceTree = "<group>";
 		};
+		655C0BFB49BE989EF937C67E /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				68FBA426605DB90C9B675611 /* GuestAPIClient.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		6A39CC1571C3D1355F23DD85 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				CFF94C306D240CE37F6199A9 /* JukeboxGuest.app */,
 				EACDA7E41AB4C133F7A4ACBD /* JukeboxHost.app */,
 				EC3943A44130927CFBD3C960 /* JukeboxHostMac.app */,
 			);
@@ -143,9 +187,21 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		915C1B3781B60C70ECC9F81A /* JukeboxGuest */ = {
+			isa = PBXGroup;
+			children = (
+				584D7A6186E6DED4A7E93EEC /* Info.plist */,
+				9D40C79331A5544DECC79525 /* JukeboxGuestApp.swift */,
+				655C0BFB49BE989EF937C67E /* Services */,
+				091009455BF341618B977C27 /* Views */,
+			);
+			path = JukeboxGuest;
+			sourceTree = "<group>";
+		};
 		D1D1C026258D8D79A0F8C23E = {
 			isa = PBXGroup;
 			children = (
+				915C1B3781B60C70ECC9F81A /* JukeboxGuest */,
 				F092F85025A1A8F660C2AE09 /* JukeboxHost */,
 				2D898FABB8D01F9214641E70 /* Packages */,
 				6A39CC1571C3D1355F23DD85 /* Products */,
@@ -169,10 +225,12 @@
 		F5BD8759E9F50C70C502F66C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */,
 				74C89E1C53664B063BB6595D /* DisplayContainerView.swift */,
 				7C3A24E9219C55EB44606CBD /* HostSetupView.swift */,
 				CC02E96805BEDCEC1D65BA99 /* NowPlayingQueueView.swift */,
 				D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */,
+				7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */,
 				37A4B91373407D416ADD043C /* RootView.swift */,
 				117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */,
 				F6F4BDE328D4604381DCB131 /* VolumeSliderView.swift */,
@@ -183,6 +241,25 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		44ED7B2BF1EAC9E8552290FB /* JukeboxGuest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E40C86E55A3F36770A33CDE /* Build configuration list for PBXNativeTarget "JukeboxGuest" */;
+			buildPhases = (
+				D39EF0F1673CBD29BD7ECFF8 /* Sources */,
+				6964637477BD2DF6BA06866A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JukeboxGuest;
+			packageProductDependencies = (
+				CF3E1C83C640BF187690724D /* JukeboxCore */,
+			);
+			productName = JukeboxGuest;
+			productReference = CFF94C306D240CE37F6199A9 /* JukeboxGuest.app */;
+			productType = "com.apple.product-type.application";
+		};
 		5CE30E17DACA517ABC1AC8BC /* JukeboxHostMac */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AB9BE347764612AD7D22AA23 /* Build configuration list for PBXNativeTarget "JukeboxHostMac" */;
@@ -234,6 +311,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					44ED7B2BF1EAC9E8552290FB = {
+						DevelopmentTeam = K5D7GVJFG7;
+						ProvisioningStyle = Automatic;
+					};
 					5CE30E17DACA517ABC1AC8BC = {
 						DevelopmentTeam = K5D7GVJFG7;
 						ProvisioningStyle = Automatic;
@@ -261,6 +342,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				44ED7B2BF1EAC9E8552290FB /* JukeboxGuest */,
 				83B574741B3BB58816824770 /* JukeboxHost */,
 				5CE30E17DACA517ABC1AC8BC /* JukeboxHostMac */,
 			);
@@ -338,15 +420,18 @@
 				DAFEEE2CB4688E27AEC45222 /* AppleMusicArtworkResolver.swift in Sources */,
 				2C1E281B8B2A0A55B65D7AD5 /* AppleMusicSearchService.swift in Sources */,
 				040A969194601A066427801A /* AudioOutputManager.swift in Sources */,
+				4D999A22C4D233473C70366A /* AudioRoutePickerView.swift in Sources */,
 				7606E56151CE36C8E92C7940 /* DisplayContainerView.swift in Sources */,
 				58B93B7C7B767FD8B59A752D /* HostArtworkURL.swift in Sources */,
 				4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */,
 				16718E34F28204F8D4E25CD8 /* HostSetupView.swift in Sources */,
 				1377562F32CCC60E89A09C26 /* JukeboxHostApp.swift in Sources */,
+				3FBB9FFBBDB40E7090FF572A /* MacAudioDevice.swift in Sources */,
 				CFEE6C104FCCAB41C88E74D0 /* NowPlayingQueueView.swift in Sources */,
 				9CEB6B7CEF8E19DB5D0EC291 /* ParticipantQRCodeSheet.swift in Sources */,
 				7B91F9048632A7CDFF8D6ED5 /* PlatformServices.swift in Sources */,
 				34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */,
+				52DC215FD87393D90054C96F /* PlaylistGraphView.swift in Sources */,
 				9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */,
 				14358B7D143D27E2DA380150 /* SecretsLoader.swift in Sources */,
 				4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */,
@@ -362,15 +447,18 @@
 				EB804B6174FE48FCBBBE1E5C /* AppleMusicArtworkResolver.swift in Sources */,
 				419C3F9BF4FE1078CDD11DA7 /* AppleMusicSearchService.swift in Sources */,
 				5E249584284CD11042B155E6 /* AudioOutputManager.swift in Sources */,
+				47C3C44D7249AF2AE4BDCE2C /* AudioRoutePickerView.swift in Sources */,
 				1E1D3C7D23EB8746CDD3A85C /* DisplayContainerView.swift in Sources */,
 				CC2D776F944C74638E9383B8 /* HostArtworkURL.swift in Sources */,
 				B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */,
 				77A0069C9CB625DDA06AB1A4 /* HostSetupView.swift in Sources */,
 				C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */,
+				F88208F4F38361E7D0427BE2 /* MacAudioDevice.swift in Sources */,
 				353A2E4AF0D08E7AEFD5C58D /* NowPlayingQueueView.swift in Sources */,
 				B3A8BEDFC94DCD73590B7972 /* ParticipantQRCodeSheet.swift in Sources */,
 				AC66F6660A0426C980A73960 /* PlatformServices.swift in Sources */,
 				CC5EBA3D032E09A8DE7BC1F8 /* PlaybackEngine.swift in Sources */,
+				A2F6C0EAED9372F50ACB1104 /* PlaylistGraphView.swift in Sources */,
 				F0EBB575F4D6DA4E50EE995C /* RootView.swift in Sources */,
 				45093F018F6C63C5444867FE /* SecretsLoader.swift in Sources */,
 				7714F4715DBE19A7270F9691 /* VisualizerView.swift in Sources */,
@@ -378,9 +466,37 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D39EF0F1673CBD29BD7ECFF8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59A215C9D79B4488F036DCD0 /* GuestAPIClient.swift in Sources */,
+				053017EE09D4F67C7CAB8D49 /* GuestRootView.swift in Sources */,
+				56D9595B562CBA2EA46E7A3D /* JukeboxGuestApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		4CAF289F3D3526AE5EA16417 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = JukeboxGuest/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ichirooo6755.jukebox.guest;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		539B469F44033F7D7A2440ED /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -480,6 +596,24 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		ABB4E4596A5357C7A9794BBD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = JukeboxGuest/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ichirooo6755.jukebox.guest;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -598,6 +732,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		5E40C86E55A3F36770A33CDE /* Build configuration list for PBXNativeTarget "JukeboxGuest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ABB4E4596A5357C7A9794BBD /* Debug */,
+				4CAF289F3D3526AE5EA16417 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		AB9BE347764612AD7D22AA23 /* Build configuration list for PBXNativeTarget "JukeboxHostMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -631,6 +774,10 @@
 			productName = JukeboxCore;
 		};
 		BF9CD71DF3BDE171CF411004 /* JukeboxCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JukeboxCore;
+		};
+		CF3E1C83C640BF187690724D /* JukeboxCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = JukeboxCore;
 		};
