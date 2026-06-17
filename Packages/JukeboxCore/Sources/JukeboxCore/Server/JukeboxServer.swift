@@ -107,7 +107,7 @@ public actor JukeboxServer {
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
             let participant = Self.participant(from: request)
             let statuses = await SearchCoordinator.shared.authStatuses(
-                baseURL: self.baseURL(for: request, port: port),
+                baseURL: Self.baseURL(for: request, port: port),
                 participant: participant
             )
             return try await self.jsonResponse(statuses)
@@ -116,11 +116,13 @@ public actor JukeboxServer {
         await http.appendRoute("GET /api/auth/:service/start") { [weak self] (request: HTTPRequest, service: String) in
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
             let participant = Self.participant(from: request)
+            let returnTo = request.query.first(where: { $0.name == "return" })?.value
             guard let musicService = MusicService(rawValue: service),
                   let url = await SearchCoordinator.shared.beginAuth(
                     service: musicService,
-                    baseURL: self.baseURL(for: request, port: port),
-                    participant: participant
+                    baseURL: Self.baseURL(for: request, port: port),
+                    participant: participant,
+                    returnTo: returnTo
                   ) else {
                 return HTTPResponse(statusCode: .badRequest, body: Data("auth is not configured".utf8))
             }
@@ -136,18 +138,22 @@ public actor JukeboxServer {
                   let state = request.query.first(where: { $0.name == "state" })?.value else {
                 return HTTPResponse(statusCode: .badRequest, body: Data("missing code or state".utf8))
             }
+            let baseURL = Self.baseURL(for: request, port: port)
             let ok = await SearchCoordinator.shared.completeAuth(
                 service: musicService,
                 code: code,
                 state: state,
-                baseURL: self.baseURL(for: request, port: port)
+                baseURL: baseURL
             )
+            let payload = OAuthStatePayload.decode(state)
+            let returnBase = payload?.host ?? baseURL
+            let onboardQuery = payload?.returnTo == "onboard" ? "onboard=1&" : ""
+            let redirectURL = "\(returnBase)/?\(onboardQuery)auth=\(service)&ok=\(ok ? "1" : "0")"
             let html = """
             <!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1">
-            <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px">
-            <h1>\(ok ? "ログイン完了" : "ログイン失敗")</h1>
-            <p>\(ok ? "Jukebox に戻ります…" : "もう一度お試しください。")</p>
-            <script>setTimeout(()=>location.href='/?tab=account&auth=\(service)&ok=\(ok ? "1" : "0")',700)</script>
+            <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px;text-align:center">
+            <p>\(ok ? "戻っています…" : "ログインに失敗しました")</p>
+            <script>location.replace('\(redirectURL)')</script>
             </body></html>
             """
             return HTTPResponse(
@@ -335,7 +341,7 @@ public actor JukeboxServer {
         )
     }
 
-    private func baseURL(for request: HTTPRequest, port: UInt16) -> String {
+    private static func baseURL(for request: HTTPRequest, port: UInt16) -> String {
         if let host = request.headers[.host], !host.isEmpty {
             return "http://\(host)"
         }

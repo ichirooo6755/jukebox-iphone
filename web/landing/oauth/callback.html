@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jukebox</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: #0a0a0a;
+      color: #9a9a9a;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <p id="message">戻っています…</p>
+  <script>
+    function decodeState(state) {
+      try {
+        let base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = 4 - (base64.length % 4);
+        if (pad < 4) base64 += '='.repeat(pad);
+        return JSON.parse(atob(base64));
+      } catch {
+        return null;
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const error = params.get('error');
+
+    if (error) {
+      document.getElementById('message').textContent = `ログインエラー: ${error}`;
+    } else if (!code || !state) {
+      document.getElementById('message').textContent = '認証パラメータが不足しています。';
+    } else {
+      const payload = decodeState(state);
+      if (!payload?.host || !payload?.service) {
+        document.getElementById('message').textContent = 'ホスト情報を復元できませんでした。';
+      } else {
+        const host = payload.host.replace(/\/$/, '');
+        const target = `${host}/api/auth/${payload.service}/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+        location.replace(target);
+      }
+    }
+  </script>
+</body>
+</html>

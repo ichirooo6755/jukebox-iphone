@@ -1,18 +1,20 @@
-# Jukebox 参加ランディング（Netlify）
+# OAuth コールバック中継（Netlify）
 
-参加者が QR コードを読み取ったとき、まずこの常設ページを経由して LAN 内のホストへリダイレクトします。
+LAN 内の `http://192.168.x.x` は Spotify / Google の OAuth Redirect URI として使えないため、HTTPS のこのページを登録します。
 
-## 本番 URL
-
-https://jukebox-join-ichirooo6755.netlify.app
-
-QR の実際の URL 例:
+## Redirect URI（Spotify / Google 共通）
 
 ```
-https://jukebox-join-ichirooo6755.netlify.app/?host=http://192.168.43.8:8765
+https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html
 ```
 
-ホストアプリは `JUKEBOX_JOIN_URL` が設定されている場合、QR に上記形式の URL を自動生成します。
+## 動作
+
+1. 参加者がホストの `/api/auth/{service}/start` へアクセス
+2. Spotify / Google へ HTTPS Redirect URI で認証
+3. この Netlify ページが `code` と `state` を受け取る
+4. `state` 内のホスト IP へ LAN コールバックへ転送
+5. ホストがトークン交換してログイン完了
 
 ## デプロイ
 
@@ -21,18 +23,10 @@ cd jukebox-iphone
 ./scripts/deploy-landing.sh
 ```
 
-初回は Netlify CLI のログインが必要です（`netlify login`）。
+## ホスト設定
 
-## ホスト側の設定
-
-`Secrets.plist` または `.env` に以下を設定:
+`.env` / `Secrets.plist`:
 
 ```
-JUKEBOX_JOIN_URL=https://jukebox-join-ichirooo6755.netlify.app
+OAUTH_PUBLIC_REDIRECT_URI=https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html
 ```
-
-## 動作フロー
-
-1. 参加者が QR をスキャン → Netlify ランディングを開く
-2. `host` パラメータの LAN URL へ自動リダイレクト（`/?join=1` 付き）
-3. PWA で名前入力（空白なら `guest-番号`）→ 各サービスにログイン or Skip

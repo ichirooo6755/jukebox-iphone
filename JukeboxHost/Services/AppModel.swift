@@ -42,11 +42,8 @@ final class AppModel: ObservableObject {
     @Published var crossfadeOpacity: Double = 1.0
 
     var participantURL: String? {
-        let ip = serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
-        guard let ip else { return nil }
-        let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
-        let localURL = "http://\(ip):\(port)"
-        return Self.joinURL(for: localURL) ?? localURL
+        guard let local = participantLocalURL else { return nil }
+        return "\(local)?join=1"
     }
 
     var participantLocalURL: String? {
@@ -54,18 +51,6 @@ final class AppModel: ObservableObject {
         guard let ip else { return nil }
         let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
         return "http://\(ip):\(port)"
-    }
-
-    private static func joinURL(for localURL: String) -> String? {
-        guard let joinBase = ProcessInfo.processInfo.environment["JUKEBOX_JOIN_URL"]?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !joinBase.isEmpty else { return nil }
-
-        let normalizedBase = joinBase.hasSuffix("/") ? String(joinBase.dropLast()) : joinBase
-        guard let encoded = localURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return nil
-        }
-        return "\(normalizedBase)?host=\(encoded)"
     }
 
     private let playbackEngine = PlaybackEngine()

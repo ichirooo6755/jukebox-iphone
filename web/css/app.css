@@ -537,10 +537,31 @@ input, select {
   left: auto;
   bottom: auto;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 420px);
+  align-self: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  z-index: 95;
+}
+
+.dock-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.dock-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.dock-items {
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  max-width: min(92vw, 360px);
-  z-index: 95;
 }
 
 .dock-item {

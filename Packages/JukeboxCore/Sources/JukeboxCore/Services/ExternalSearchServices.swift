@@ -67,11 +67,10 @@ public actor SpotifySearchService {
     private var userAccessToken: String?
     private var userRefreshToken: String?
     private var userTokenExpiry: Date?
-    private var pendingState: String?
+    private var pendingStateID: String?
 
     private let clientID = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_ID"]
     private let clientSecret = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_SECRET"]
-    private let redirectPath = "/api/auth/spotify/callback"
     private let tokenStore = OAuthTokenStore(namespace: "spotify")
 
     private init() {
@@ -94,16 +93,23 @@ public actor SpotifySearchService {
         )
     }
 
-    public func beginAuthorization(baseURL: String) async -> URL? {
+    public func beginAuthorization(baseURL: String, returnTo: String? = nil) async -> URL? {
         guard let clientID, !clientID.isEmpty else { return nil }
-        let state = UUID().uuidString
-        pendingState = state
+        let id = UUID().uuidString
+        pendingStateID = id
+        let state = OAuthStatePayload(
+            id: id,
+            host: baseURL,
+            service: .spotify,
+            returnTo: returnTo
+        ).encoded()
+        let redirectURI = OAuthRedirectHelper.redirectURI(baseURL: baseURL, service: .spotify)
 
         var components = URLComponents(string: "https://accounts.spotify.com/authorize")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "scope", value: "playlist-read-private playlist-read-collaborative user-library-read"),
             URLQueryItem(name: "state", value: state)
         ]
@@ -111,9 +117,14 @@ public actor SpotifySearchService {
     }
 
     public func completeAuthorization(code: String, state: String, baseURL: String) async -> Bool {
-        guard state == pendingState,
+        guard let payload = OAuthStatePayload.decode(state),
+              payload.id == pendingStateID,
+              payload.musicService == .spotify,
               let clientID, let clientSecret,
               !clientID.isEmpty, !clientSecret.isEmpty else { return false }
+
+        pendingStateID = nil
+        let redirectURI = OAuthRedirectHelper.redirectURI(baseURL: baseURL, service: .spotify)
 
         var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
         request.httpMethod = "POST"
@@ -124,7 +135,7 @@ public actor SpotifySearchService {
         components.queryItems = [
             URLQueryItem(name: "grant_type", value: "authorization_code"),
             URLQueryItem(name: "code", value: code),
-            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath)
+            URLQueryItem(name: "redirect_uri", value: redirectURI)
         ]
         request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
 
@@ -330,17 +341,8 @@ public actor YouTubeSearchService {
     private let apiKey = ProcessInfo.processInfo.environment["YOUTUBE_API_KEY"]
     private let clientID = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_ID"]
     private let clientSecret = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_SECRET"]
-    private let redirectPath = "/api/auth/youtube/callback"
-    private var pendingStates: [String: String] = [:]
+    private var pendingParticipants: [String: String] = [:]
     private let tokenStore = OAuthTokenStore(namespace: "youtube")
-
-    private func redirectURI(baseURL: String) -> String {
-        if let override = ProcessInfo.processInfo.environment["YOUTUBE_OAUTH_REDIRECT_URI"],
-           !override.isEmpty {
-            return override
-        }
-        return baseURL + redirectPath
-    }
 
     private func normalizedParticipant(_ participant: String?) -> String? {
         guard let participant else { return nil }
@@ -374,16 +376,28 @@ public actor YouTubeSearchService {
         )
     }
 
-    public func beginAuthorization(baseURL: String, participant: String?) async -> URL? {
+    public func beginAuthorization(
+        baseURL: String,
+        participant: String?,
+        returnTo: String? = nil
+    ) async -> URL? {
         guard let clientID, !clientID.isEmpty,
               let participant = normalizedParticipant(participant) else { return nil }
-        let state = UUID().uuidString
-        pendingStates[state] = participant
+        let id = UUID().uuidString
+        pendingParticipants[id] = participant
+        let state = OAuthStatePayload(
+            id: id,
+            host: baseURL,
+            service: .youtube,
+            participant: participant,
+            returnTo: returnTo
+        ).encoded()
+        let redirectURI = OAuthRedirectHelper.redirectURI(baseURL: baseURL, service: .youtube)
 
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "redirect_uri", value: redirectURI(baseURL: baseURL)),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: "https://www.googleapis.com/auth/youtube.readonly"),
             URLQueryItem(name: "access_type", value: "offline"),
@@ -394,9 +408,14 @@ public actor YouTubeSearchService {
     }
 
     public func completeAuthorization(code: String, state: String, baseURL: String) async -> Bool {
-        guard let participant = pendingStates.removeValue(forKey: state),
+        guard let payload = OAuthStatePayload.decode(state),
+              payload.musicService == .youtube,
+              let participant = pendingParticipants.removeValue(forKey: payload.id)
+                ?? payload.participant,
               let clientID, let clientSecret,
               !clientID.isEmpty, !clientSecret.isEmpty else { return false }
+
+        let redirectURI = OAuthRedirectHelper.redirectURI(baseURL: baseURL, service: .youtube)
 
         var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
         request.httpMethod = "POST"
@@ -406,7 +425,7 @@ public actor YouTubeSearchService {
             URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "client_secret", value: clientSecret),
-            URLQueryItem(name: "redirect_uri", value: redirectURI(baseURL: baseURL)),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "grant_type", value: "authorization_code")
         ]
         request.httpBody = components.percentEncodedQuery?.data(using: .utf8)

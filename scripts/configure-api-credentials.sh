@@ -9,10 +9,8 @@ SECRETS_PLIST="$ROOT/JukeboxHost/Resources/Secrets.plist"
 SCHEME_DIR="$ROOT/JukeboxHost.xcodeproj/xcshareddata/xcschemes"
 SCHEME_FILE="$SCHEME_DIR/JukeboxHost.xcscheme"
 
+OAUTH_PUBLIC_REDIRECT_URI="${OAUTH_PUBLIC_REDIRECT_URI:-https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html}"
 HOST_IP="${JUKEBOX_HOST_IP:-$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "127.0.0.1")}"
-
-SPOTIFY_REDIRECT="http://${HOST_IP}:8765/api/auth/spotify/callback"
-YOUTUBE_REDIRECT="http://${HOST_IP}:8765/api/auth/youtube/callback"
 
 read_env_value() {
   local key="$1"
@@ -57,6 +55,7 @@ SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
 YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
 YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
 YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET}
+OAUTH_PUBLIC_REDIRECT_URI=${OAUTH_PUBLIC_REDIRECT_URI}
 EOF
   chmod 600 "$ENV_FILE"
 }
@@ -77,6 +76,8 @@ write_secrets_plist() {
 	<string>${YOUTUBE_CLIENT_ID}</string>
 	<key>YOUTUBE_CLIENT_SECRET</key>
 	<string>${YOUTUBE_CLIENT_SECRET}</string>
+	<key>OAUTH_PUBLIC_REDIRECT_URI</key>
+	<string>${OAUTH_PUBLIC_REDIRECT_URI}</string>
 </dict>
 </plist>
 EOF
@@ -112,6 +113,7 @@ keys = [
     "YOUTUBE_API_KEY",
     "YOUTUBE_CLIENT_ID",
     "YOUTUBE_CLIENT_SECRET",
+    "OAUTH_PUBLIC_REDIRECT_URI",
 ]
 
 tree = ET.parse(scheme_path)
@@ -140,9 +142,10 @@ PY
 
 open_console_pages() {
   echo ""
-  echo "開発者コンソールを開きます。以下の Redirect URI を登録してください:"
-  echo "  Spotify: $SPOTIFY_REDIRECT"
-  echo "  YouTube: $YOUTUBE_REDIRECT"
+  echo "開発者コンソールで以下の Redirect URI を登録してください（Spotify / Google 共通）:"
+  echo "  $OAUTH_PUBLIC_REDIRECT_URI"
+  echo ""
+  echo "ホスト LAN URL（参加者アクセス用）: http://${HOST_IP}:8765"
   echo ""
   open "https://developer.spotify.com/dashboard" 2>/dev/null || true
   open "https://console.cloud.google.com/apis/credentials" 2>/dev/null || true
@@ -151,6 +154,7 @@ open_console_pages() {
 main() {
   echo "=== Jukebox API 認証設定 ==="
   echo "検出したホスト IP: $HOST_IP"
+  echo "OAuth Redirect URI: $OAUTH_PUBLIC_REDIRECT_URI"
   echo ""
 
   SPOTIFY_CLIENT_ID="$(prompt_value SPOTIFY_CLIENT_ID "Spotify Client ID")"
@@ -158,6 +162,7 @@ main() {
   YOUTUBE_API_KEY="$(prompt_value YOUTUBE_API_KEY "YouTube API Key")"
   YOUTUBE_CLIENT_ID="$(prompt_value YOUTUBE_CLIENT_ID "YouTube OAuth Client ID")"
   YOUTUBE_CLIENT_SECRET="$(prompt_value YOUTUBE_CLIENT_SECRET "YouTube OAuth Client Secret")"
+  OAUTH_PUBLIC_REDIRECT_URI="$(prompt_value OAUTH_PUBLIC_REDIRECT_URI "OAuth Public Redirect URI (HTTPS)")"
 
   write_env_file
   write_secrets_plist
@@ -170,9 +175,8 @@ main() {
   echo "  $SECRETS_PLIST"
   echo "  $SCHEME_FILE (Environment Variables 同期済み)"
   echo ""
-  echo "Redirect URI:"
-  echo "  Spotify: $SPOTIFY_REDIRECT"
-  echo "  YouTube: $YOUTUBE_REDIRECT"
+  echo "Redirect URI（Spotify / Google 両方に登録）:"
+  echo "  $OAUTH_PUBLIC_REDIRECT_URI"
 
   open_console_pages
 }

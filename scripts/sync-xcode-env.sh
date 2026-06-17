@@ -35,6 +35,7 @@ keys = [
     "YOUTUBE_API_KEY",
     "YOUTUBE_CLIENT_ID",
     "YOUTUBE_CLIENT_SECRET",
+    "OAUTH_PUBLIC_REDIRECT_URI",
 ]
 
 for scheme_path in scheme_dir.glob("*.xcscheme"):

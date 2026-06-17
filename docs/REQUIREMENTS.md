@@ -1,6 +1,6 @@
 # 要件定義 v4.0 実装状況
 
-親ディレクトリの `要件定義.md` と、このリポジトリの現状を突合した引き継ぎ用メモ。
+リポジトリ直下の `README.md`（要件定義書 v4.0 セクション）と、このリポジトリの現状を突合した引き継ぎ用メモ。
 
 ## 結論
 
@@ -28,7 +28,7 @@
 - Apple Music はカタログ検索に加えて、ホスト端末のライブラリ曲・ライブラリプレイリスト検索に対応。
 - Spotify 再生はホストアプリ内のネイティブ再生ではなく、Spotify アプリへの deep link。進捗は曲長ベースの推定。
 - YouTube ログインは**参加者ごと**に PWA の Account タブから行う。トークンはニックネーム単位でホストに保存される。
-- YouTube OAuth の Redirect URI は `http://<host-ip>:8765/api/auth/youtube/callback` を Google Cloud に登録する。
+- Spotify / YouTube OAuth の Redirect URI は LAN IP 不可のため、Netlify の HTTPS コールバック `https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html` を Spotify ダッシュボードと Google Cloud に登録する（LAN IP の URI は削除）。
 - YouTube 再生は WKWebView 埋め込み。iOS/macOS の画面階層へ配置済みだが、自動再生や長時間安定性は実機確認が必要。
 - 300ms / 1秒未満の同期目標はコード上リアルタイム同期だが、実測は未実施。
 - 24時間連続稼働は復旧機構まで実装済みだが、耐久試験は未完了。
@@ -46,13 +46,13 @@
    - iPhone / iPad: `JukeboxHost`
    - Mac: `JukeboxHostMac`
 2. `./scripts/import-auth-files.sh` で `.env` / `Secrets.plist` / Scheme 環境変数を同期
-3. Redirect URI を登録:
-   - Spotify: `http://<host-ip>:8765/api/auth/spotify/callback`
-   - YouTube: `http://<host-ip>:8765/api/auth/youtube/callback`
+3. Redirect URI を登録（Spotify / Google Cloud 共通）:
+   - `https://jukebox-join-ichirooo6755.netlify.app/oauth/callback.html`
+   - `.env` の `OAUTH_PUBLIC_REDIRECT_URI` も同じ URL にする
 4. ホスト端末で Apple Music を許可
 5. ホストを開始し、表示された参加者 URL を同一LANのスマホで開く
 6. Apple Music の曲検索 → キュー追加 → 再生を最初に確認
 
 ## 元ドキュメント
 
-親ディレクトリの `要件定義.md` を参照。
+親 `README.md` の要件定義書 v4.0 セクションを参照。

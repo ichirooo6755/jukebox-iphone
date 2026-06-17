@@ -21,5 +21,5 @@ if [[ -n "$URL" ]]; then
   echo "QR URL example: ${URL}/?host=http://192.168.x.x:8765"
   echo ""
   echo "Secrets.plist / .env に設定:"
-  echo "JUKEBOX_JOIN_URL=$URL"
+  echo "OAUTH_PUBLIC_REDIRECT_URI=${URL}/oauth/callback.html"
 fi

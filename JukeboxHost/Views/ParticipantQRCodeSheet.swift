@@ -65,7 +65,7 @@ struct ParticipantQRCodeCard: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("Netlify 経由で LAN 内の Web UI へ案内します（同じ Wi-Fi が必要）")
+            Text("同じ Wi-Fi の端末で QR を1回スキャンすると、参加画面が開きます")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,7 +118,7 @@ struct ParticipantQRCodeSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                Text("Netlify 経由で LAN 内の Web UI へ案内します（同じ Wi-Fi が必要）")
+                Text("同じ Wi-Fi の端末で QR を1回スキャンすると、参加画面が開きます")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

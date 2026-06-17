@@ -46,14 +46,23 @@ public actor SearchCoordinator {
         ]
     }
 
-    public func beginAuth(service: MusicService, baseURL: String, participant: String? = nil) async -> URL? {
+    public func beginAuth(
+        service: MusicService,
+        baseURL: String,
+        participant: String? = nil,
+        returnTo: String? = nil
+    ) async -> URL? {
         switch service {
         case .appleMusic:
             return nil
         case .spotify:
-            return await SpotifySearchService.shared.beginAuthorization(baseURL: baseURL)
+            return await SpotifySearchService.shared.beginAuthorization(baseURL: baseURL, returnTo: returnTo)
         case .youtube:
-            return await YouTubeSearchService.shared.beginAuthorization(baseURL: baseURL, participant: participant)
+            return await YouTubeSearchService.shared.beginAuthorization(
+                baseURL: baseURL,
+                participant: participant,
+                returnTo: returnTo
+            )
         }
     }
 
