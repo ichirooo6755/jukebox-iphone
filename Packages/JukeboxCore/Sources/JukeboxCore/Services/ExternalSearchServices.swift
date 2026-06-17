@@ -5,13 +5,77 @@ public actor SpotifySearchService {
 
     private var accessToken: String?
     private var tokenExpiry: Date?
+    private var userAccessToken: String?
+    private var userRefreshToken: String?
+    private var userTokenExpiry: Date?
+    private var pendingState: String?
 
     private let clientID = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_ID"]
     private let clientSecret = ProcessInfo.processInfo.environment["SPOTIFY_CLIENT_SECRET"]
+    private let redirectPath = "/api/auth/spotify/callback"
+
+    public func authStatus(baseURL: String) async -> ServiceAuthStatus {
+        let configured = clientID?.isEmpty == false && clientSecret?.isEmpty == false
+        return ServiceAuthStatus(
+            service: .spotify,
+            isConfigured: configured,
+            isAuthenticated: userAccessToken != nil,
+            loginURL: configured ? "\(baseURL)/api/auth/spotify/start" : nil,
+            message: configured
+                ? (userAccessToken == nil ? "Spotifyにログインできます" : "Spotifyログイン済み")
+                : "SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET を設定してください"
+        )
+    }
+
+    public func beginAuthorization(baseURL: String) async -> URL? {
+        guard let clientID, !clientID.isEmpty else { return nil }
+        let state = UUID().uuidString
+        pendingState = state
+
+        var components = URLComponents(string: "https://accounts.spotify.com/authorize")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "scope", value: "playlist-read-private playlist-read-collaborative user-library-read"),
+            URLQueryItem(name: "state", value: state)
+        ]
+        return components.url
+    }
+
+    public func completeAuthorization(code: String, state: String, baseURL: String) async -> Bool {
+        guard state == pendingState,
+              let clientID, let clientSecret,
+              !clientID.isEmpty, !clientSecret.isEmpty else { return false }
+
+        var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
+        request.httpMethod = "POST"
+        let credentials = "\(clientID):\(clientSecret)".data(using: .utf8)!.base64EncodedString()
+        request.setValue("Basic \(credentials)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "grant_type", value: "authorization_code"),
+            URLQueryItem(name: "code", value: code),
+            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath)
+        ]
+        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["access_token"] as? String else { return false }
+
+        userAccessToken = token
+        userRefreshToken = json["refresh_token"] as? String
+        if let expiresIn = json["expires_in"] as? Int {
+            userTokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+        }
+        return true
+    }
 
     public func search(query: String) async -> [TrackSearchResult] {
-        guard clientID != nil, clientSecret != nil else { return [] }
-        guard let token = try? await fetchToken() else { return [] }
+        guard let token = try? await usableToken() else { return [] }
 
         var components = URLComponents(string: "https://api.spotify.com/v1/search")!
         components.queryItems = [
@@ -54,6 +118,114 @@ public actor SpotifySearchService {
         }
     }
 
+    public func searchPlaylists(query: String) async -> [PlaylistSummary] {
+        guard let token = try? await usableToken() else { return [] }
+
+        var components = URLComponents(string: "https://api.spotify.com/v1/search")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "type", value: "playlist"),
+            URLQueryItem(name: "limit", value: "20")
+        ]
+        guard let url = components.url else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let playlists = json["playlists"] as? [String: Any],
+              let items = playlists["items"] as? [[String: Any]] else { return [] }
+
+        return items.compactMap { item in
+            guard let id = item["id"] as? String,
+                  let name = item["name"] as? String else { return nil }
+            let owner = (item["owner"] as? [String: Any])?["display_name"] as? String ?? "Spotify"
+            let artwork = (item["images"] as? [[String: Any]])?.first?["url"] as? String
+            let total = (item["tracks"] as? [String: Any])?["total"] as? Int
+            return PlaylistSummary(
+                id: id,
+                title: name,
+                owner: owner,
+                artworkURL: artwork,
+                service: .spotify,
+                trackCount: total
+            )
+        }
+    }
+
+    public func playlistTracks(playlistID: String, limit: Int) async -> [TrackSearchResult] {
+        guard let token = try? await usableToken() else { return [] }
+
+        var components = URLComponents(string: "https://api.spotify.com/v1/playlists/\(playlistID)/tracks")!
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: "\(min(max(limit, 1), 100))"),
+            URLQueryItem(name: "fields", value: "items(track(id,name,duration_ms,artists(name),album(images)))")
+        ]
+        guard let url = components.url else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["items"] as? [[String: Any]] else { return [] }
+
+        return items.compactMap { item in
+            guard let track = item["track"] as? [String: Any],
+                  let id = track["id"] as? String,
+                  let name = track["name"] as? String else { return nil }
+            let artists = (track["artists"] as? [[String: Any]])?
+                .compactMap { $0["name"] as? String }
+                .joined(separator: ", ") ?? "Unknown"
+            let duration = (track["duration_ms"] as? Int ?? 0) / 1000
+            let artwork = ((track["album"] as? [String: Any])?["images"] as? [[String: Any]])?.first?["url"] as? String
+            return TrackSearchResult(
+                title: name,
+                artist: artists,
+                artworkURL: artwork,
+                service: .spotify,
+                musicID: id,
+                duration: duration
+            )
+        }
+    }
+
+    private func usableToken() async throws -> String {
+        if let userAccessToken, let expiry = userTokenExpiry, expiry > Date() {
+            return userAccessToken
+        }
+        if userAccessToken != nil, let refreshed = try? await refreshUserToken() {
+            return refreshed
+        }
+        return try await fetchToken()
+    }
+
+    private func refreshUserToken() async throws -> String {
+        guard let refresh = userRefreshToken, let clientID, let clientSecret else {
+            throw SearchServiceError.tokenFailed
+        }
+        var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
+        request.httpMethod = "POST"
+        let credentials = "\(clientID):\(clientSecret)".data(using: .utf8)!.base64EncodedString()
+        request.setValue("Basic \(credentials)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = "grant_type=refresh_token&refresh_token=\(refresh)".data(using: .utf8)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["access_token"] as? String else {
+            throw SearchServiceError.tokenFailed
+        }
+        userAccessToken = token
+        if let expiresIn = json["expires_in"] as? Int {
+            userTokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+        }
+        return token
+    }
+
     private func fetchToken() async throws -> String {
         if let accessToken, let tokenExpiry, tokenExpiry > Date() {
             return accessToken
@@ -87,6 +259,75 @@ public actor YouTubeSearchService {
     public static let shared = YouTubeSearchService()
 
     private let apiKey = ProcessInfo.processInfo.environment["YOUTUBE_API_KEY"]
+    private let clientID = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_ID"]
+    private let clientSecret = ProcessInfo.processInfo.environment["YOUTUBE_CLIENT_SECRET"]
+    private let redirectPath = "/api/auth/youtube/callback"
+    private var pendingState: String?
+    private var accessToken: String?
+    private var refreshToken: String?
+    private var tokenExpiry: Date?
+
+    public func authStatus(baseURL: String) async -> ServiceAuthStatus {
+        let configured = clientID?.isEmpty == false && clientSecret?.isEmpty == false
+        return ServiceAuthStatus(
+            service: .youtube,
+            isConfigured: configured || apiKey?.isEmpty == false,
+            isAuthenticated: accessToken != nil,
+            loginURL: configured ? "\(baseURL)/api/auth/youtube/start" : nil,
+            message: configured
+                ? (accessToken == nil ? "YouTubeにログインできます" : "YouTubeログイン済み")
+                : "公開検索はYOUTUBE_API_KEY、ログインはYOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET が必要です"
+        )
+    }
+
+    public func beginAuthorization(baseURL: String) async -> URL? {
+        guard let clientID, !clientID.isEmpty else { return nil }
+        let state = UUID().uuidString
+        pendingState = state
+
+        var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "scope", value: "https://www.googleapis.com/auth/youtube.readonly"),
+            URLQueryItem(name: "access_type", value: "offline"),
+            URLQueryItem(name: "prompt", value: "consent"),
+            URLQueryItem(name: "state", value: state)
+        ]
+        return components.url
+    }
+
+    public func completeAuthorization(code: String, state: String, baseURL: String) async -> Bool {
+        guard state == pendingState,
+              let clientID, let clientSecret,
+              !clientID.isEmpty, !clientSecret.isEmpty else { return false }
+
+        var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "code", value: code),
+            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "client_secret", value: clientSecret),
+            URLQueryItem(name: "redirect_uri", value: baseURL + redirectPath),
+            URLQueryItem(name: "grant_type", value: "authorization_code")
+        ]
+        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["access_token"] as? String else { return false }
+
+        accessToken = token
+        refreshToken = json["refresh_token"] as? String
+        if let expiresIn = json["expires_in"] as? Int {
+            tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+        }
+        return true
+    }
 
     public func search(query: String) async -> [TrackSearchResult] {
         guard let apiKey else { return [] }
@@ -128,6 +369,157 @@ public actor YouTubeSearchService {
                 duration: 0
             )
         }
+    }
+
+    public func searchPlaylists(query: String) async -> [PlaylistSummary] {
+        if let token = try? await usableToken() {
+            var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/playlists")!
+            components.queryItems = [
+                URLQueryItem(name: "part", value: "snippet,contentDetails"),
+                URLQueryItem(name: "mine", value: "true"),
+                URLQueryItem(name: "maxResults", value: "50")
+            ]
+            guard let url = components.url else { return [] }
+
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+            guard let (data, response) = try? await URLSession.shared.data(for: request),
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let items = json["items"] as? [[String: Any]] else { return [] }
+
+            return items.compactMap { item in
+                guard let id = item["id"] as? String,
+                      let snippet = item["snippet"] as? [String: Any],
+                      let title = snippet["title"] as? String,
+                      title.localizedStandardContains(query) else { return nil }
+                let channel = snippet["channelTitle"] as? String ?? "YouTube"
+                let thumbs = snippet["thumbnails"] as? [String: Any]
+                let medium = thumbs?["medium"] as? [String: Any]
+                let count = (item["contentDetails"] as? [String: Any])?["itemCount"] as? Int
+                return PlaylistSummary(
+                    id: id,
+                    title: title,
+                    owner: channel,
+                    artworkURL: medium?["url"] as? String,
+                    service: .youtube,
+                    trackCount: count
+                )
+            }
+        }
+
+        guard let apiKey else { return [] }
+        var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search")!
+        components.queryItems = [
+            URLQueryItem(name: "part", value: "snippet"),
+            URLQueryItem(name: "type", value: "playlist"),
+            URLQueryItem(name: "maxResults", value: "20"),
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "key", value: apiKey)
+        ]
+        guard let url = components.url else { return [] }
+
+        guard let (data, response) = try? await URLSession.shared.data(from: url),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["items"] as? [[String: Any]] else { return [] }
+
+        return items.compactMap { item in
+            guard let id = (item["id"] as? [String: Any])?["playlistId"] as? String,
+                  let snippet = item["snippet"] as? [String: Any],
+                  let title = snippet["title"] as? String else { return nil }
+            let channel = snippet["channelTitle"] as? String ?? "YouTube"
+            let thumbs = snippet["thumbnails"] as? [String: Any]
+            let medium = thumbs?["medium"] as? [String: Any]
+            return PlaylistSummary(
+                id: id,
+                title: title,
+                owner: channel,
+                artworkURL: medium?["url"] as? String,
+                service: .youtube,
+                trackCount: nil
+            )
+        }
+    }
+
+    public func playlistTracks(playlistID: String, limit: Int) async -> [TrackSearchResult] {
+        var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/playlistItems")!
+        var queryItems = [
+            URLQueryItem(name: "part", value: "snippet,contentDetails"),
+            URLQueryItem(name: "playlistId", value: playlistID),
+            URLQueryItem(name: "maxResults", value: "\(min(max(limit, 1), 50))")
+        ]
+        if let apiKey {
+            queryItems.append(URLQueryItem(name: "key", value: apiKey))
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else { return [] }
+
+        var request = URLRequest(url: url)
+        if let token = try? await usableToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["items"] as? [[String: Any]] else { return [] }
+
+        return items.compactMap { item in
+            guard let snippet = item["snippet"] as? [String: Any],
+                  let title = snippet["title"] as? String,
+                  let details = item["contentDetails"] as? [String: Any],
+                  let videoID = details["videoId"] as? String else { return nil }
+            let channel = snippet["videoOwnerChannelTitle"] as? String
+                ?? snippet["channelTitle"] as? String
+                ?? "YouTube"
+            let thumbs = snippet["thumbnails"] as? [String: Any]
+            let medium = thumbs?["medium"] as? [String: Any]
+            return TrackSearchResult(
+                title: title,
+                artist: channel,
+                artworkURL: medium?["url"] as? String,
+                service: .youtube,
+                musicID: videoID,
+                duration: 0
+            )
+        }
+    }
+
+    private func usableToken() async throws -> String {
+        if let accessToken, let expiry = tokenExpiry, expiry > Date() {
+            return accessToken
+        }
+        return try await refreshAccessToken()
+    }
+
+    private func refreshAccessToken() async throws -> String {
+        guard let refreshToken, let clientID, let clientSecret else {
+            throw SearchServiceError.tokenFailed
+        }
+        var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "client_secret", value: clientSecret),
+            URLQueryItem(name: "refresh_token", value: refreshToken),
+            URLQueryItem(name: "grant_type", value: "refresh_token")
+        ]
+        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["access_token"] as? String else {
+            throw SearchServiceError.tokenFailed
+        }
+        accessToken = token
+        if let expiresIn = json["expires_in"] as? Int {
+            tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn - 60))
+        }
+        return token
     }
 }
 

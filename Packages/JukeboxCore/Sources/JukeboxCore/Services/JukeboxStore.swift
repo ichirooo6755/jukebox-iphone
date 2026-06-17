@@ -20,6 +20,7 @@ public actor JukeboxStore {
     private var listeners: [UUID: (JukeboxEvent) -> Void] = [:]
     private weak var playback: (any PlaybackControlling)?
     private var skipVoteRequired = 2
+    private var lastSessionPersistElapsed: Double = -1
 
     public init(database: QueueDatabase = QueueDatabase()) {
         self.database = database
@@ -95,6 +96,37 @@ public actor JukeboxStore {
             try await playNext()
         }
         return item
+    }
+
+    public func importPlaylist(service: MusicService, playlistID: String, addedBy: String, limit: Int) async throws -> [QueueItem] {
+        let tracks = await SearchCoordinator.shared.playlistTracks(
+            service: service,
+            playlistID: playlistID,
+            limit: min(max(limit, 1), 100)
+        )
+
+        var added: [QueueItem] = []
+        for track in tracks {
+            let item = try database.addItem(QueueItemInput(
+                title: track.title,
+                artist: track.artist,
+                artworkURL: track.artworkURL,
+                service: track.service,
+                musicID: track.musicID,
+                duration: track.duration,
+                addedBy: addedBy
+            ))
+            added.append(item)
+        }
+
+        let queue = database.fetchQueue()
+        broadcast(.queueUpdated(queue))
+        broadcast(.state(await currentState()))
+
+        if nowPlaying == nil {
+            try await playNext()
+        }
+        return added
     }
 
     public func removeFromQueue(id: Int) async throws {
@@ -183,6 +215,10 @@ public actor JukeboxStore {
         if let playback {
             elapsed = await playback.currentElapsed()
             isPlaying = await playback.currentIsPlaying()
+            if abs(elapsed - lastSessionPersistElapsed) >= 5 {
+                persistSession()
+                lastSessionPersistElapsed = elapsed
+            }
             broadcast(.state(await currentState()))
         }
     }

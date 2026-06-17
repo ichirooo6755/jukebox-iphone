@@ -39,13 +39,19 @@
       </section>
 
       <section id="view-search" class="view">
-        <div class="search-bar">
-          <input id="search-input" type="search" placeholder="曲名・アーティストを検索" autocomplete="off">
-          <select id="search-service">
-            <option value="apple_music">Apple Music</option>
-            <option value="spotify">Spotify</option>
-            <option value="youtube">YouTube</option>
-          </select>
+        <div class="search-panel">
+          <div class="segmented-control" aria-label="検索タイプ">
+            <button class="segment active" data-search-type="tracks">曲</button>
+            <button class="segment" data-search-type="playlists">プレイリスト</button>
+          </div>
+          <div class="search-grid">
+            <input id="search-input" type="search" placeholder="曲名・アーティスト・プレイリストを検索" autocomplete="off">
+            <select id="search-service">
+              <option value="apple_music">Apple Music</option>
+              <option value="spotify">Spotify</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
         </div>
         <ul id="search-results" class="result-list"></ul>
       </section>
@@ -69,11 +75,7 @@
         </div>
         <div class="account-card services">
           <h3>サービス</h3>
-          <ul>
-            <li>Apple Music — ホスト経由で検索・再生</li>
-            <li>Spotify — 検索（要クライアントID設定）</li>
-            <li>YouTube — 検索（要APIキー設定）</li>
-          </ul>
+          <div id="auth-status-list" class="auth-status-list"></div>
         </div>
       </section>
     </main>

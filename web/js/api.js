@@ -41,6 +41,12 @@ export const api = {
   removeFromQueue: (id) => request(`/api/queue/${id}`, { method: 'DELETE' }),
   reorderQueue: (order) => request('/api/queue/reorder', { method: 'PUT', body: JSON.stringify({ order }) }),
   search: (q, service) => request(`/api/search?q=${encodeURIComponent(q)}&service=${service}`),
+  playlists: (q, service) => request(`/api/playlists?q=${encodeURIComponent(q)}&service=${service}`),
+  importPlaylist: (service, playlistID, addedBy, limit = 50) => request('/api/playlists/import', {
+    method: 'POST',
+    body: JSON.stringify({ service, playlist_id: playlistID, added_by: addedBy, limit }),
+  }),
+  authStatus: () => request('/api/auth/status'),
   registerUser: (nickname) => request('/api/users', { method: 'POST', body: JSON.stringify({ nickname }) }),
   voteSkip: (nickname) => request('/api/playback/vote-skip', { method: 'POST', body: JSON.stringify({ nickname }) }),
 };

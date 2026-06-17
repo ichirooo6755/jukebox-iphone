@@ -185,6 +185,82 @@ public struct TrackSearchResult: Codable, Identifiable, Sendable {
     }
 }
 
+public struct PlaylistSummary: Codable, Identifiable, Sendable {
+    public var id: String
+    public var title: String
+    public var owner: String
+    public var artworkURL: String?
+    public var service: MusicService
+    public var trackCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, owner
+        case artworkURL = "artwork_url"
+        case service
+        case trackCount = "track_count"
+    }
+
+    public init(
+        id: String,
+        title: String,
+        owner: String,
+        artworkURL: String?,
+        service: MusicService,
+        trackCount: Int?
+    ) {
+        self.id = id
+        self.title = title
+        self.owner = owner
+        self.artworkURL = artworkURL
+        self.service = service
+        self.trackCount = trackCount
+    }
+}
+
+public struct ServiceAuthStatus: Codable, Sendable {
+    public var service: MusicService
+    public var isConfigured: Bool
+    public var isAuthenticated: Bool
+    public var loginURL: String?
+    public var message: String
+
+    enum CodingKeys: String, CodingKey {
+        case service
+        case isConfigured = "is_configured"
+        case isAuthenticated = "is_authenticated"
+        case loginURL = "login_url"
+        case message
+    }
+
+    public init(
+        service: MusicService,
+        isConfigured: Bool,
+        isAuthenticated: Bool,
+        loginURL: String?,
+        message: String
+    ) {
+        self.service = service
+        self.isConfigured = isConfigured
+        self.isAuthenticated = isAuthenticated
+        self.loginURL = loginURL
+        self.message = message
+    }
+}
+
+public struct PlaylistImportRequest: Codable, Sendable {
+    public var service: MusicService
+    public var playlistID: String
+    public var addedBy: String
+    public var limit: Int
+
+    enum CodingKeys: String, CodingKey {
+        case service
+        case playlistID = "playlist_id"
+        case addedBy = "added_by"
+        case limit
+    }
+}
+
 public struct ReorderRequest: Codable, Sendable {
     public var order: [Int]
 

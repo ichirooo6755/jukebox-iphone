@@ -1,10 +1,5 @@
 {
-  "images" : [
-    {
-      "idiom" : "universal",
-      "platform" : "ios"
-    }
-  ],
+  "images" : [],
   "info" : {
     "author" : "xcode",
     "version" : 1

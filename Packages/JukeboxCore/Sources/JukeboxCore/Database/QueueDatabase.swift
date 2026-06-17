@@ -4,7 +4,7 @@ import SQLite3
 public final class QueueDatabase: @unchecked Sendable {
     private var db: OpaquePointer?
     private let dbPath: String
-    private let lock = NSLock()
+    private let lock = NSRecursiveLock()
 
     public init(path: String? = nil) {
         if let path {

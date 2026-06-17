@@ -100,6 +100,54 @@ public actor JukeboxServer {
             return try await self.jsonResponse(status)
         }
 
+        await http.appendRoute("GET /api/auth/status") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let statuses = await SearchCoordinator.shared.authStatuses(baseURL: self.baseURL(for: request, port: port))
+            return try await self.jsonResponse(statuses)
+        }
+
+        await http.appendRoute("GET /api/auth/:service/start") { [weak self] (request: HTTPRequest, service: String) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            guard let musicService = MusicService(rawValue: service),
+                  let url = await SearchCoordinator.shared.beginAuth(
+                    service: musicService,
+                    baseURL: self.baseURL(for: request, port: port)
+                  ) else {
+                return HTTPResponse(statusCode: .badRequest, body: Data("auth is not configured".utf8))
+            }
+            var headers = HTTPHeaders()
+            headers.addValue(url.absoluteString, for: .location)
+            return HTTPResponse(statusCode: .found, headers: headers)
+        }
+
+        await http.appendRoute("GET /api/auth/:service/callback") { [weak self] (request: HTTPRequest, service: String) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            guard let musicService = MusicService(rawValue: service),
+                  let code = request.query.first(where: { $0.name == "code" })?.value,
+                  let state = request.query.first(where: { $0.name == "state" })?.value else {
+                return HTTPResponse(statusCode: .badRequest, body: Data("missing code or state".utf8))
+            }
+            let ok = await SearchCoordinator.shared.completeAuth(
+                service: musicService,
+                code: code,
+                state: state,
+                baseURL: self.baseURL(for: request, port: port)
+            )
+            let html = """
+            <!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1">
+            <body style="font-family:-apple-system;background:#111;color:#fff;padding:24px">
+            <h1>\(ok ? "ログイン完了" : "ログイン失敗")</h1>
+            <p>Jukeboxの画面に戻ってください。</p>
+            <script>setTimeout(()=>location.href='/',900)</script>
+            </body></html>
+            """
+            return HTTPResponse(
+                statusCode: ok ? .ok : .badRequest,
+                headers: [.contentType: "text/html; charset=utf-8"],
+                body: Data(html.utf8)
+            )
+        }
+
         await http.appendRoute("GET /api/state") { [weak self] _ in
             guard let self else { return HTTPResponse(statusCode: .internalServerError) }
             return try await self.jsonResponse(await self.store.currentState())
@@ -169,6 +217,28 @@ public actor JukeboxServer {
             return try await self.jsonResponse(results)
         }
 
+        await http.appendRoute("GET /api/playlists") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let query = request.query.first(where: { $0.name == "q" })?.value ?? ""
+            let serviceRaw = request.query.first(where: { $0.name == "service" })?.value ?? "apple_music"
+            let service = MusicService(rawValue: serviceRaw) ?? .appleMusic
+            let results = await SearchCoordinator.shared.searchPlaylists(query: query, service: service)
+            return try await self.jsonResponse(results)
+        }
+
+        await http.appendRoute("POST /api/playlists/import") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let importRequest = try self.decoder.decode(PlaylistImportRequest.self, from: body)
+            let added = try await self.store.importPlaylist(
+                service: importRequest.service,
+                playlistID: importRequest.playlistID,
+                addedBy: importRequest.addedBy,
+                limit: importRequest.limit
+            )
+            return try await self.jsonResponse(added, status: .created)
+        }
+
         await http.appendRoute("GET /ws", to: .webSocket(wsHandler))
 
         if let webRoot {
@@ -212,6 +282,14 @@ public actor JukeboxServer {
             connectedClients: clientCount,
             wifiConnected: Self.localIPAddress() != nil
         )
+    }
+
+    private func baseURL(for request: HTTPRequest, port: UInt16) -> String {
+        if let host = request.headers[.host], !host.isEmpty {
+            return "http://\(host)"
+        }
+        let ip = Self.localIPAddress() ?? "127.0.0.1"
+        return "http://\(ip):\(port)"
     }
 
     public static func localIPAddress() -> String? {

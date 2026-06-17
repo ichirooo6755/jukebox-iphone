@@ -7,6 +7,7 @@ const state = {
   elapsed: 0,
   isPlaying: false,
   skipVote: { votes: 0, required: 2, voters: [] },
+  searchType: 'tracks',
 };
 
 const els = {
@@ -29,6 +30,7 @@ const els = {
   nickname: document.getElementById('nickname'),
   hostUrl: document.getElementById('host-url'),
   accountStatus: document.getElementById('account-status'),
+  authStatusList: document.getElementById('auth-status-list'),
 };
 
 function formatTime(sec) {
@@ -161,7 +163,9 @@ async function runSearch() {
     return;
   }
   try {
-    const results = await api.search(q, els.searchService.value);
+    const results = state.searchType === 'playlists'
+      ? await api.playlists(q, els.searchService.value)
+      : await api.search(q, els.searchService.value);
     els.searchResults.innerHTML = '';
     if (!results.length) {
       els.searchResults.innerHTML = '<li class="empty">結果がありません</li>';
@@ -174,20 +178,24 @@ async function runSearch() {
         ${item.artwork_url ? `<img src="${item.artwork_url}" alt="">` : '<div class="artwork placeholder" style="width:56px;height:56px;font-size:1.5rem">♪</div>'}
         <div class="meta">
           <h3>${escapeHtml(item.title)}</h3>
-          <p>${escapeHtml(item.artist)} · ${serviceLabel(item.service)}</p>
+          <p>${escapeHtml(item.artist || item.owner)} · ${serviceLabel(item.service)}${item.track_count ? ` · ${item.track_count}曲` : ''}</p>
         </div>
-        <button class="btn icon add" aria-label="追加">＋</button>
+        <button class="btn icon add" aria-label="追加">${state.searchType === 'playlists' ? '↧' : '＋'}</button>
       `;
       li.querySelector('.add').addEventListener('click', async () => {
-        await api.addToQueue({
-          title: item.title,
-          artist: item.artist,
-          artwork_url: item.artwork_url,
-          service: item.service,
-          music_id: item.music_id,
-          duration: item.duration,
-          added_by: getNickname(),
-        });
+        if (state.searchType === 'playlists') {
+          await api.importPlaylist(item.service, item.id, getNickname(), 50);
+        } else {
+          await api.addToQueue({
+            title: item.title,
+            artist: item.artist,
+            artwork_url: item.artwork_url,
+            service: item.service,
+            music_id: item.music_id,
+            duration: item.duration,
+            added_by: getNickname(),
+          });
+        }
       });
       els.searchResults.appendChild(li);
     });
@@ -235,9 +243,20 @@ function setupAccount() {
       els.accountStatus.textContent = `接続失敗: ${err.message}`;
     }
   });
+
+  refreshAuthStatus();
 }
 
 function setupSearch() {
+  document.querySelectorAll('[data-search-type]').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('[data-search-type]').forEach((b) => b.classList.remove('active'));
+      button.classList.add('active');
+      state.searchType = button.dataset.searchType;
+      runSearch();
+    });
+  });
+
   els.searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(runSearch, 300);
@@ -251,6 +270,28 @@ function setupSearch() {
       console.error(err);
     }
   });
+}
+
+async function refreshAuthStatus() {
+  if (!els.authStatusList) return;
+  try {
+    const statuses = await api.authStatus();
+    els.authStatusList.innerHTML = '';
+    statuses.forEach((status) => {
+      const row = document.createElement('div');
+      row.className = 'auth-status-row';
+      row.innerHTML = `
+        <div>
+          <strong>${serviceLabel(status.service)}</strong>
+          <p>${escapeHtml(status.message)}</p>
+        </div>
+        ${status.login_url ? `<a class="btn auth-login" href="${status.login_url}">ログイン</a>` : `<span class="auth-pill ${status.is_authenticated ? 'ok' : 'warn'}">${status.is_authenticated ? 'OK' : '要設定'}</span>`}
+      `;
+      els.authStatusList.appendChild(row);
+    });
+  } catch (err) {
+    els.authStatusList.innerHTML = `<p class="muted">認証状態を取得できません: ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 function setupConnection() {
@@ -276,6 +317,7 @@ async function bootstrap() {
   setupAccount();
   setupSearch();
   setupConnection();
+  refreshAuthStatus();
 
   try {
     const initial = await api.state();
