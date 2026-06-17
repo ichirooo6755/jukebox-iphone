@@ -13,6 +13,7 @@ final class AudioOutputManager: ObservableObject {
 
     #if os(iOS)
     private var routeObserver: NSObjectProtocol?
+    private var preferDeviceSpeaker = false
 
     init() {
         configureSession()
@@ -37,9 +38,24 @@ final class AudioOutputManager: ObservableObject {
         do {
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
+            if preferDeviceSpeaker {
+                try? session.overrideOutputAudioPort(.speaker)
+            }
         } catch {
             print("Audio session error: \(error)")
         }
+    }
+
+    /// HDMI 接続時は映像のみ外部へ。音声は端末スピーカー/BT/有線を優先。
+    func preferDeviceSpeakerForExternalDisplay(_ enabled: Bool) {
+        preferDeviceSpeaker = enabled
+        let session = AVAudioSession.sharedInstance()
+        if enabled {
+            try? session.overrideOutputAudioPort(.speaker)
+        } else {
+            try? session.overrideOutputAudioPort(.none)
+        }
+        updateRoute()
     }
 
     private func updateRoute() {

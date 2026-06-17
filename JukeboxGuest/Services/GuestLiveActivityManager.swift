@@ -7,6 +7,8 @@ final class GuestLiveActivityManager {
     static let shared = GuestLiveActivityManager()
 
     private var activity: Activity<JukeboxActivityAttributes>?
+    private var lastContent: JukeboxActivityAttributes.ContentState?
+    private var lastProgressSecond = -1
 
     var isSupported: Bool {
         ActivityAuthorizationInfo().areActivitiesEnabled
@@ -20,6 +22,7 @@ final class GuestLiveActivityManager {
         let artist = current?.artist ?? "Jukebox"
         let service = current?.service.displayName ?? ""
         let duration = max(current?.duration ?? 0, 1)
+        let elapsed = Int(state.elapsed)
         let hasVoted = state.skipVote.voters.contains(nickname)
 
         let content = JukeboxActivityAttributes.ContentState(
@@ -27,13 +30,20 @@ final class GuestLiveActivityManager {
             artist: artist,
             service: service,
             isPlaying: state.isPlaying,
-            elapsed: Int(state.elapsed),
+            elapsed: elapsed,
             duration: duration,
             skipVotes: state.skipVote.votes,
             skipRequired: state.skipVote.required,
             hasVotedSkip: hasVoted,
             queueCount: state.queue.count
         )
+
+        if let lastContent, !shouldUpdate(from: lastContent, to: content, elapsed: elapsed) {
+            return
+        }
+
+        lastContent = content
+        lastProgressSecond = elapsed
 
         if let activity {
             Task {
@@ -55,6 +65,8 @@ final class GuestLiveActivityManager {
 
     func end() {
         guard let activity else { return }
+        lastContent = nil
+        lastProgressSecond = -1
         let final = JukeboxActivityAttributes.ContentState(
             title: "切断しました",
             artist: "",
@@ -71,5 +83,22 @@ final class GuestLiveActivityManager {
             await activity.end(ActivityContent(state: final, staleDate: nil), dismissalPolicy: .immediate)
         }
         self.activity = nil
+    }
+
+    private func shouldUpdate(
+        from previous: JukeboxActivityAttributes.ContentState,
+        to next: JukeboxActivityAttributes.ContentState,
+        elapsed: Int
+    ) -> Bool {
+        if previous.title != next.title { return true }
+        if previous.artist != next.artist { return true }
+        if previous.service != next.service { return true }
+        if previous.isPlaying != next.isPlaying { return true }
+        if previous.skipVotes != next.skipVotes { return true }
+        if previous.skipRequired != next.skipRequired { return true }
+        if previous.hasVotedSkip != next.hasVotedSkip { return true }
+        if previous.queueCount != next.queueCount { return true }
+        if abs(elapsed - lastProgressSecond) >= 5 { return true }
+        return false
     }
 }

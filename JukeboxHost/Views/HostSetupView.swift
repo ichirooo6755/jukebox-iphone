@@ -52,14 +52,6 @@ struct HostSetupView: View {
                             localURL: model.participantLocalURL,
                             qrSize: 200
                         )
-                        .listRowInsets(EdgeInsets())
-                        if let ip = model.displayedHostIP ?? JukeboxServer.localIPAddress() {
-                            LabeledContent("IP アドレス", value: ip)
-                                .font(.caption.monospaced())
-                        }
-                        LabeledContent("参加者 URL", value: url)
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
                         Button {
                             Task { await model.refreshJoinAddress() }
                         } label: {

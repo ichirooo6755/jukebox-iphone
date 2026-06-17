@@ -45,11 +45,13 @@ final class ExternalDisplayManager: ObservableObject {
         if preferExternalDisplay, let scene = externalScenes.first {
             setupWindow(on: scene, model: model)
             isExternalConnected = true
+            model.audioOutput.preferDeviceSpeakerForExternalDisplay(true)
             let size = scene.screen.bounds.size
             externalScreenSize = "\(Int(size.width))×\(Int(size.height))"
         } else {
             teardownExternalWindow()
             isExternalConnected = false
+            model.audioOutput.preferDeviceSpeakerForExternalDisplay(false)
             externalScreenSize = nil
         }
     }

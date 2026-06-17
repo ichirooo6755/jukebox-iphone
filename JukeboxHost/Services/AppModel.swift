@@ -46,9 +46,16 @@ final class AppModel: ObservableObject {
     @Published var crossfadeOpacity: Double = 1.0
 
     var participantURL: String? {
-        participantLocalURL
+        participantJoinURL
     }
 
+    /// QR 用の安定 URL（mDNS）。IP 変動の影響を受けにくい。
+    var participantJoinURL: String? {
+        let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
+        return "http://Jukebox.local:\(port)"
+    }
+
+    /// LAN IP 直アクセス用（フォールバック表示）
     var participantLocalURL: String? {
         let ip = displayedHostIP ?? serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
         guard let ip else { return nil }
