@@ -26,6 +26,22 @@ public struct PlaylistLaneTrack: Codable, Sendable, Equatable, Identifiable {
         case artworkURL = "artwork_url"
         case musicID = "music_id"
     }
+
+    public init(
+        title: String,
+        artist: String,
+        artworkURL: String?,
+        service: MusicService,
+        musicID: String,
+        duration: Int
+    ) {
+        self.title = title
+        self.artist = artist
+        self.artworkURL = artworkURL
+        self.service = service
+        self.musicID = musicID
+        self.duration = duration
+    }
 }
 
 public struct PlaylistLane: Codable, Sendable, Equatable, Identifiable {
@@ -99,6 +115,58 @@ public struct PlaylistLaneImportRequest: Codable, Sendable {
         self.avatarURL = avatarURL
         self.playlistTitle = playlistTitle
         self.playlistArtworkURL = playlistArtworkURL
+    }
+}
+
+public struct PlaylistTracksImportRequest: Codable, Sendable {
+    public var service: MusicService
+    public var addedBy: String
+    public var displayName: String?
+    public var avatarURL: String?
+    public var playlistID: String?
+    public var playlistTitle: String
+    public var playlistArtworkURL: String?
+    public var tracks: [PlaylistLaneTrack]
+
+    enum CodingKeys: String, CodingKey {
+        case service, tracks
+        case addedBy = "added_by"
+        case displayName = "display_name"
+        case avatarURL = "avatar_url"
+        case playlistID = "playlist_id"
+        case playlistTitle = "playlist_title"
+        case playlistArtworkURL = "playlist_artwork_url"
+    }
+
+    public init(
+        service: MusicService,
+        addedBy: String,
+        playlistTitle: String,
+        tracks: [PlaylistLaneTrack],
+        displayName: String? = nil,
+        avatarURL: String? = nil,
+        playlistID: String? = nil,
+        playlistArtworkURL: String? = nil
+    ) {
+        self.service = service
+        self.addedBy = addedBy
+        self.playlistTitle = playlistTitle
+        self.tracks = tracks
+        self.displayName = displayName
+        self.avatarURL = avatarURL
+        self.playlistID = playlistID
+        self.playlistArtworkURL = playlistArtworkURL
+    }
+}
+
+public struct PlaylistTracksImportResponse: Codable, Sendable {
+    public var mode: QueuePlaybackMode
+    public var lane: PlaylistLane?
+    public var queueItems: [QueueItem]?
+
+    enum CodingKeys: String, CodingKey {
+        case mode, lane
+        case queueItems = "queue_items"
     }
 }
 

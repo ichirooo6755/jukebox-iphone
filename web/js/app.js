@@ -50,6 +50,7 @@ const els = {
   playlistGraph: document.getElementById('playlist-graph'),
   playlistUrlInput: document.getElementById('playlist-url-input'),
   playlistUrlImport: document.getElementById('playlist-url-import'),
+  myPlaylistsBtn: document.getElementById('my-playlists'),
   queueList: document.getElementById('queue-list'),
   nickname: document.getElementById('nickname'),
   hostUrl: document.getElementById('host-url'),
@@ -216,11 +217,14 @@ function updateSearchMode() {
   const service = els.searchService.value;
   state.useUnifiedSearch = service === 'apple_music';
   els.searchTypeSegments.hidden = state.useUnifiedSearch;
+  if (els.myPlaylistsBtn) {
+    els.myPlaylistsBtn.hidden = service === 'apple_music';
+  }
   if (state.useUnifiedSearch) {
     els.searchInput.placeholder = '曲・アーティスト・プレイリストを検索';
   } else {
     els.searchInput.placeholder = state.searchType === 'playlists'
-      ? 'プレイリストを検索'
+      ? 'プレイリストを検索（空欄で自分の一覧）'
       : '曲を検索';
   }
 }
@@ -371,18 +375,27 @@ async function addSearchResult(item) {
 let searchTimer = null;
 async function runSearch() {
   const q = els.searchInput.value.trim();
-  if (!q) {
+  const service = els.searchService.value;
+  if (!q && !(state.searchType === 'playlists' && service !== 'apple_music')) {
     els.searchResults.innerHTML = '';
     return;
   }
   try {
     let results;
     if (state.useUnifiedSearch) {
-      results = await api.unifiedSearch(q, els.searchService.value);
+      results = await api.unifiedSearch(q, service);
+    } else if (state.searchType === 'playlists' && !q) {
+      results = await api.myPlaylists(service);
+      results = results.map((row) => ({
+        ...row,
+        kind: 'playlist',
+        subtitle: row.owner,
+        id: row.id,
+      }));
     } else {
       results = state.searchType === 'playlists'
-        ? await api.playlists(q, els.searchService.value)
-        : await api.search(q, els.searchService.value);
+        ? await api.playlists(q, service)
+        : await api.search(q, service);
       results = results.map((row) => ({
         ...row,
         kind: state.searchType === 'playlists' ? 'playlist' : 'track',
@@ -566,6 +579,18 @@ function setupSearch() {
     }
   });
 
+  els.myPlaylistsBtn?.addEventListener('click', async () => {
+    const service = els.searchService.value;
+    if (service === 'apple_music') return;
+    state.searchType = 'playlists';
+    document.querySelectorAll('[data-search-type]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.searchType === 'playlists');
+    });
+    els.searchInput.value = '';
+    updateSearchMode();
+    await runSearch();
+  });
+
   els.togglePlayback.addEventListener('click', async () => {
     try {
       await api.togglePlayback();
@@ -695,7 +720,7 @@ function renderAuthAction(status) {
     return '<span class="auth-pill ok">OK</span>';
   }
   if (status.service === 'apple_music') {
-    return '<span class="auth-pill warn">ホスト共有</span>';
+    return '<span class="auth-pill warn">Guestアプリで許可</span>';
   }
   if (!status.login_url) {
     return '<span class="auth-pill warn">要設定</span>';

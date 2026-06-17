@@ -274,11 +274,15 @@ public actor SpotifySearchService {
     }
 
     public func searchPlaylists(query: String, participant: String?) async -> [PlaylistSummary] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return await fetchMyPlaylists(participant: participant)
+        }
         guard let token = try? await usableToken(participant: participant) else { return [] }
 
         var components = URLComponents(string: "https://api.spotify.com/v1/search")!
         components.queryItems = [
-            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "q", value: trimmed),
             URLQueryItem(name: "type", value: "playlist"),
             URLQueryItem(name: "limit", value: "20")
         ]
@@ -308,6 +312,43 @@ public actor SpotifySearchService {
                 trackCount: total
             )
         }
+    }
+
+    public func fetchMyPlaylists(participant: String?) async -> [PlaylistSummary] {
+        guard normalizedParticipant(participant) != nil,
+              let token = try? await usableToken(participant: participant) else { return [] }
+
+        var url = URL(string: "https://api.spotify.com/v1/me/playlists?limit=50")!
+        var results: [PlaylistSummary] = []
+
+        while true {
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            guard let (data, response) = try? await URLSession.shared.data(for: request),
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let items = json["items"] as? [[String: Any]] else { break }
+
+            results.append(contentsOf: items.compactMap { item in
+                guard let id = item["id"] as? String,
+                      let name = item["name"] as? String else { return nil }
+                let owner = (item["owner"] as? [String: Any])?["display_name"] as? String ?? "Spotify"
+                let artwork = (item["images"] as? [[String: Any]])?.first?["url"] as? String
+                let total = (item["tracks"] as? [String: Any])?["total"] as? Int
+                return PlaylistSummary(
+                    id: id,
+                    title: name,
+                    owner: owner,
+                    artworkURL: artwork,
+                    service: .spotify,
+                    trackCount: total
+                )
+            })
+
+            guard let next = (json["next"] as? String).flatMap(URL.init(string:)) else { break }
+            url = next
+        }
+        return results
     }
 
     public func fetchPlaylist(playlistID: String, participant: String?) async -> PlaylistSummary? {
@@ -662,6 +703,7 @@ public actor YouTubeSearchService {
 
     public func searchPlaylists(query: String, participant: String?) async -> [PlaylistSummary] {
         if let token = try? await usableToken(participant: participant) {
+            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/playlists")!
             components.queryItems = [
                 URLQueryItem(name: "part", value: "snippet,contentDetails"),
@@ -681,8 +723,8 @@ public actor YouTubeSearchService {
             return items.compactMap { item in
                 guard let id = item["id"] as? String,
                       let snippet = item["snippet"] as? [String: Any],
-                      let title = snippet["title"] as? String,
-                      title.localizedStandardContains(query) else { return nil }
+                      let title = snippet["title"] as? String else { return nil }
+                if !trimmed.isEmpty, !title.localizedStandardContains(trimmed) { return nil }
                 let channel = snippet["channelTitle"] as? String ?? "YouTube"
                 let thumbs = snippet["thumbnails"] as? [String: Any]
                 let medium = thumbs?["medium"] as? [String: Any]

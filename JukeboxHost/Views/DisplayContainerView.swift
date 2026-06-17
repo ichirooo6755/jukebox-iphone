@@ -41,12 +41,25 @@ struct DisplayContainerView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Group {
+                #if os(iOS)
+                if model.externalDisplay.isExternalConnected && model.externalDisplay.deviceShowsControlsOnly {
+                    HostDeviceControlView()
+                } else {
+                    switch model.displayMode {
+                    case .nowPlayingQueue:
+                        NowPlayingQueueView()
+                    case .visualizer:
+                        VisualizerView()
+                    }
+                }
+                #else
                 switch model.displayMode {
                 case .nowPlayingQueue:
                     NowPlayingQueueView()
                 case .visualizer:
                     VisualizerView()
                 }
+                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .opacity(model.crossfadeOpacity)

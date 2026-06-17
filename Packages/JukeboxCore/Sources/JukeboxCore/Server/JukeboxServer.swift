@@ -153,8 +153,7 @@ public actor JukeboxServer {
             return try await self.jsonResponse(statuses)
         }
 
-        await http.appendRoute("GET /api/auth/:service/start") { [weak self] (request: HTTPRequest, service: String) in
-            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+        await http.appendRoute("GET /api/auth/:service/start") { (request: HTTPRequest, service: String) in
             let participant = Self.participant(from: request)
             let returnTo = request.query.first(where: { $0.name == "return" })?.value
             guard let musicService = MusicService(rawValue: service),
@@ -171,8 +170,7 @@ public actor JukeboxServer {
             return HTTPResponse(statusCode: .found, headers: headers)
         }
 
-        await http.appendRoute("GET /api/auth/:service/callback") { [weak self] (request: HTTPRequest, service: String) in
-            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+        await http.appendRoute("GET /api/auth/:service/callback") { (request: HTTPRequest, service: String) in
             guard let musicService = MusicService(rawValue: service),
                   let code = request.query.first(where: { $0.name == "code" })?.value,
                   let state = request.query.first(where: { $0.name == "state" })?.value else {
@@ -358,6 +356,23 @@ public actor JukeboxServer {
             let modeRequest = try self.decoder.decode(PlaybackModeRequest.self, from: body)
             await self.store.setPlaybackMode(modeRequest.mode)
             return try await self.jsonResponse(await self.store.playlistRouletteState())
+        }
+
+        await http.appendRoute("GET /api/playlists/mine") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let serviceRaw = request.query.first(where: { $0.name == "service" })?.value ?? "spotify"
+            let service = MusicService(rawValue: serviceRaw) ?? .spotify
+            let participant = Self.participant(from: request)
+            let results = await SearchCoordinator.shared.myPlaylists(service: service, participant: participant)
+            return try await self.jsonResponse(results)
+        }
+
+        await http.appendRoute("POST /api/playlists/import-tracks") { [weak self] (request: HTTPRequest) in
+            guard let self else { return HTTPResponse(statusCode: .internalServerError) }
+            let body = try await request.bodyData
+            let importRequest = try self.decoder.decode(PlaylistTracksImportRequest.self, from: body)
+            let result = try await self.store.importPlaylistTracks(importRequest)
+            return try await self.jsonResponse(result, status: .created)
         }
 
         await http.appendRoute("POST /api/playlist-lanes") { [weak self] (request: HTTPRequest) in

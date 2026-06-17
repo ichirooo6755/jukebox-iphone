@@ -78,6 +78,24 @@ public struct QueueItemInput: Codable, Sendable {
         case duration
         case addedBy = "added_by"
     }
+
+    public init(
+        title: String,
+        artist: String,
+        artworkURL: String?,
+        service: MusicService,
+        musicID: String,
+        duration: Int,
+        addedBy: String
+    ) {
+        self.title = title
+        self.artist = artist
+        self.artworkURL = ArtworkURLNormalizer.normalize(artworkURL)
+        self.service = service
+        self.musicID = musicID
+        self.duration = duration
+        self.addedBy = addedBy
+    }
 }
 
 public struct UserProfile: Codable, Identifiable, Sendable {
@@ -331,6 +349,13 @@ public struct ArtistImportRequest: Codable, Sendable {
         case artistID = "artist_id"
         case addedBy = "added_by"
         case limit
+    }
+
+    public init(service: MusicService, artistID: String, addedBy: String, limit: Int) {
+        self.service = service
+        self.artistID = artistID
+        self.addedBy = addedBy
+        self.limit = limit
     }
 }
 

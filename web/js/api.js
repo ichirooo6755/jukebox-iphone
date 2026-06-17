@@ -115,6 +115,8 @@ export const api = {
     request(withParticipant(`/api/search/unified?q=${encodeURIComponent(q)}&service=${service}`, participant)),
   playlists: (q, service, participant = getNickname()) =>
     request(withParticipant(`/api/playlists?q=${encodeURIComponent(q)}&service=${service}`, participant)),
+  myPlaylists: (service, participant = getNickname()) =>
+    request(withParticipant(`/api/playlists/mine?service=${service}`, participant)),
   importPlaylist: (service, playlistID, addedBy, limit = 50) => request('/api/playlists/import', {
     method: 'POST',
     body: JSON.stringify({ service, playlist_id: playlistID, added_by: addedBy, limit }),

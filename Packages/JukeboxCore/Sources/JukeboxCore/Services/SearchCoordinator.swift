@@ -83,15 +83,27 @@ public actor SearchCoordinator {
 
     public func searchPlaylists(query: String, service: MusicService, participant: String? = nil) async -> [PlaylistSummary] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
+        guard !trimmed.isEmpty || service == .spotify || service == .youtube else { return [] }
 
         switch service {
         case .appleMusic:
+            guard !trimmed.isEmpty else { return [] }
             return await appleMusicSearcher?.searchPlaylists(query: trimmed) ?? []
         case .spotify:
             return await SpotifySearchService.shared.searchPlaylists(query: trimmed, participant: participant)
         case .youtube:
             return await YouTubeSearchService.shared.searchPlaylists(query: trimmed, participant: participant)
+        }
+    }
+
+    public func myPlaylists(service: MusicService, participant: String? = nil) async -> [PlaylistSummary] {
+        switch service {
+        case .appleMusic:
+            return []
+        case .spotify:
+            return await SpotifySearchService.shared.fetchMyPlaylists(participant: participant)
+        case .youtube:
+            return await YouTubeSearchService.shared.searchPlaylists(query: "", participant: participant)
         }
     }
 

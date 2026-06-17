@@ -18,7 +18,10 @@
 | 役割 | 端末 | やること |
 |------|------|----------|
 | ホスト | 常設 iPhone/iPad/Mac | アプリ起動・再生・QR 表示 |
-| 参加者 | 任意のスマホ | PWA または **JukeboxGuest** アプリで名前入力・検索・キュー編集 |
+| 参加者 | **Android / iPhone / 任意のブラウザ** | **Web（PWA）が標準**。QR スキャンで参加・検索・キュー編集 |
+| 参加者（iOS 任意） | iPhone / iPad | **JukeboxGuest** — Apple Music マイライブラリ・Live Activity など Web にない機能向け |
+
+> **Web（PWA）は廃止しません。** Android ユーザーや「アプリを入れたくない」参加者の主力 UI です。Guest アプリは iOS 向けの**追加オプション**です。
 
 ### 技術の要点
 
@@ -102,14 +105,24 @@ open JukeboxHost.xcodeproj
 3. 参加者用 URL が画面左下・QR に表示される（コピー可）
 4. 音声出力は **サウンド設定** から変更（再生画面のアイコンでも開けます）
 
-### ゲストアプリ（JukeboxGuest）
+### 参加者 — どちらを使う？
+
+| 端末 | 推奨 | 理由 |
+|------|------|------|
+| **Android** | **Web（PWA）のみ** | ブラウザで QR → `http://<IP>:8765` |
+| **iPhone（手軽に）** | **Web（PWA）** | インストール不要。ホーム画面に追加も可 |
+| **iPhone（Apple Music マイライブラリ等）** | **JukeboxGuest**（任意） | 自分のプレイリスト・Dynamic Island |
+
+**Web は今後もメインの参加者 UI として維持します。** ホストは引き続き `web/` を同梱して配信します。
+
+### ゲストアプリ（JukeboxGuest）— iOS 向けオプション
 
 1. Scheme: **JukeboxGuest** を選択
 2. Account タブでホスト URL（例: `http://192.168.1.10:8765`）を入力して接続
 3. Search タブでプレイリスト URL を貼り付けて追加
 4. Spotify / YouTube は Account タブからログイン（参加者ごとに分離）
 
-### 参加者（1回の QR スキャンで完結）
+### 参加者（1回の QR スキャンで完結）— **Web が標準**
 
 ```
 ホスト QR スキャン

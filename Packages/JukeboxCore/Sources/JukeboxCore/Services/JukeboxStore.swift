@@ -29,7 +29,12 @@ public actor JukeboxStore {
 
     public init(database: QueueDatabase = QueueDatabase()) {
         self.database = database
-        loadRouletteState()
+        if let state = Self.loadRouletteState(forKey: rouletteDefaultsKey) {
+            playbackMode = state.mode
+            playlistLanes = state.lanes
+            lastRouletteParticipant = state.lastRouletteParticipant
+            sessionStartedAt = state.sessionStartedAt
+        }
     }
 
     public func setPlaybackController(_ controller: (any PlaybackControlling)?) {
@@ -167,6 +172,58 @@ public actor JukeboxStore {
             try await playNext()
         }
         return lane
+    }
+
+    public func importPlaylistTracks(_ request: PlaylistTracksImportRequest) async throws -> PlaylistTracksImportResponse {
+        let limited = Array(request.tracks.prefix(100))
+        guard !limited.isEmpty else {
+            throw NSError(domain: "JukeboxStore", code: 404, userInfo: [
+                NSLocalizedDescriptionKey: "インポートする曲がありません"
+            ])
+        }
+
+        if playbackMode == .playlistRoulette {
+            if sessionStartedAt == nil {
+                sessionStartedAt = Date()
+            }
+            let lane = PlaylistLane(
+                id: UUID().uuidString,
+                participant: request.addedBy,
+                displayName: request.displayName ?? request.addedBy,
+                avatarURL: request.avatarURL,
+                service: request.service,
+                playlistID: request.playlistID ?? UUID().uuidString,
+                playlistTitle: request.playlistTitle,
+                playlistArtworkURL: request.playlistArtworkURL,
+                tracks: limited,
+                position: 0,
+                joinedAt: Date(),
+                color: PlaylistLanePalette.color(for: request.addedBy, index: playlistLanes.count)
+            )
+            playlistLanes.append(lane)
+            persistRouletteState()
+            broadcast(.state(await currentState()))
+            if nowPlaying == nil {
+                try await playNext()
+            }
+            return PlaylistTracksImportResponse(mode: playbackMode, lane: lane, queueItems: nil)
+        }
+
+        var added: [QueueItem] = []
+        for track in limited {
+            let input = QueueItemInput(
+                title: track.title,
+                artist: track.artist,
+                artworkURL: track.artworkURL,
+                service: track.service,
+                musicID: track.musicID,
+                duration: track.duration,
+                addedBy: request.displayName ?? request.addedBy
+            )
+            let item = try await addToQueue(input)
+            added.append(item)
+        }
+        return PlaylistTracksImportResponse(mode: playbackMode, lane: nil, queueItems: added)
     }
 
     public func removePlaylistLane(id: String) async throws {
@@ -395,15 +452,12 @@ public actor JukeboxStore {
         UserDefaults.standard.set(data, forKey: rouletteDefaultsKey)
     }
 
-    private func loadRouletteState() {
-        guard let data = UserDefaults.standard.data(forKey: rouletteDefaultsKey),
+    private static func loadRouletteState(forKey key: String) -> PlaylistRouletteState? {
+        guard let data = UserDefaults.standard.data(forKey: key),
               let state = try? JSONDecoder().decode(PlaylistRouletteState.self, from: data) else {
-            return
+            return nil
         }
-        playbackMode = state.mode
-        playlistLanes = state.lanes
-        lastRouletteParticipant = state.lastRouletteParticipant
-        sessionStartedAt = state.sessionStartedAt
+        return state
     }
 
     public func onTrackFinished() async throws {

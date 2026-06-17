@@ -2,7 +2,7 @@ name: JukeboxHost
 options:
   bundleIdPrefix: com.ichirooo6755.jukebox
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "16.2"
     macOS: "14.0"
   xcodeVersion: "16.0"
 packages:
@@ -88,13 +88,29 @@ targets:
     dependencies:
       - package: JukeboxCore
         product: JukeboxCore
+      - target: JukeboxGuestWidget
+        embed: true
     settings:
       base:
         INFOPLIST_FILE: JukeboxGuest/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.ichirooo6755.jukebox.guest
         CODE_SIGN_STYLE: Automatic
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_PREVIEWS: YES
+  JukeboxGuestWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - JukeboxGuestWidget
+      - path: JukeboxGuest/Shared
+    settings:
+      base:
+        INFOPLIST_FILE: JukeboxGuestWidget/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.ichirooo6755.jukebox.guest.widget
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
 schemes:
   JukeboxHost:
     build:

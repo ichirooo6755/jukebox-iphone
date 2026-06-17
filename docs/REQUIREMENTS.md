@@ -5,26 +5,31 @@
 ## 結論
 
 **Apple Music を主再生サービスにする iPhone / iPad / Mac ホスト構成は実使用の入口まで到達。**
-参加者 PWA、キュー、WebSocket、Apple Music カタログ検索・再生、プレイリスト追加、スキップ投票、セッション復旧、Mac ホストは実装済み。
+参加者 **PWA（Web）を標準 UI として維持**（Android・インストール不要・わかりやすさ）。JukeboxGuest は iOS 向けオプション。
 
-一方で、要件定義のうち「各ユーザーの Apple Music 認証」「Spotify をホスト内で完全再生」「24時間耐久保証」「Raspberry Pi 分離」は未完了または外部制約あり。
+一方で、要件定義のうち「Spotify をホスト内で完全再生」「24時間耐久保証」「Raspberry Pi 分離」は未完了または外部制約あり。Apple Music の参加者ライブラリは **JukeboxGuest** で対応（Web PWA 不可）。
 
 ## 実装済み
 
 - 常設ホスト: `JukeboxHost`（iPhone / iPad）と `JukeboxHostMac`（macOS 14+）
 - 参加者 PWA: Home / Search / Queue / Account
-- REST API: `/api/state`, `/api/queue`, `/api/search`, `/api/playlists`, `/api/auth/status` など
+- 参加者ネイティブ: `JukeboxGuest`（Home / Search / Queue / Account、Live Activity 対応）
+- REST API: `/api/state`, `/api/queue`, `/api/search`, `/api/playlists`, `/api/playlists/mine`, `/api/playlists/import-tracks`, `/api/auth/status` など
 - WebSocket: `/ws` で Now Playing / Queue を同期
 - DB: SQLite に `queue`, `users`, `session`, `skip_votes`
 - Apple Music: MusicKit 許可、カタログ曲検索、カタログプレイリスト検索、一括キュー追加、再生
-- Spotify: OAuth、曲検索、プレイリスト検索、一括キュー追加、Spotify App deep link 再生
-- YouTube: OAuth、API Key または OAuth トークンによる検索、プレイリスト取得、一括キュー追加、WKWebView 再生
+- Apple Music（参加者）: **JukeboxGuest** で端末ごとに MusicKit 許可 → マイライブラリプレイリスト取得 → ホストへ曲 ID 送信（`docs/APPLE_MUSIC_PARTICIPANT.md`）
+- Spotify: OAuth（参加者ごと）、曲検索、プレイリスト検索、**自分のプレイリスト一覧**（`/api/playlists/mine`）、一括キュー追加、Spotify App deep link 再生
+- YouTube: OAuth（参加者ごと）、API Key または OAuth トークンによる検索、**自分のプレイリスト一覧**、プレイリスト取得、一括キュー追加、WKWebView 再生
 - Phase 5: アニメーション、クロスフェード風表示、スキップ投票
 - Phase 6: スリープ抑止、Wi-Fi 監視、サーバー再起動、セッション永続化
+- Host: QR 自動生成、HDMI 外部表示と音声出力の分離、画面消灯防止
+- Guest: Web パリティ、Apple 風 UI、Dynamic Island / ロック画面 Live Activity
 
 ## 部分実装 / 制限
 
-- Apple Music の「各ユーザー認証」は未対応。現実装は**ホスト端末の MusicKit 認証を全参加者で共有**する方式（Apple プラットフォーム制約）。
+- Apple Music **再生**はホスト端末の MusicKit を全参加者で共有。**マイライブラリ取得**は JukeboxGuest のみ（PWA ブラウザでは MusicKit 個人ライブラリ API 不可）。
+- Soundiiz / TuneMyMusic 等で他サービス → Apple Music に移行したプレイリストは、移行後に **JukeboxGuest** のマイライブラリからインポート可能。
 - Spotify 再生はホストアプリ内のネイティブ再生ではなく、Spotify アプリへの deep link。進捗は曲長ベースの推定。
 - YouTube ログインは**参加者ごと**に PWA / JukeboxGuest の Account タブから行う。再生は WKWebView + IFrame API（進捗・終了・エラーをハンドル）。
 - Spotify / YouTube OAuth の Redirect URI は LAN IP 不可のため、Netlify の HTTPS コールバックを使用。
@@ -34,7 +39,6 @@
 ## 未実装
 
 - Raspberry Pi 制御サーバー分離の本番移行（Phase 7）。`pi-server/` v0.2 はキュー/state の互換サブセットのみ。
-- 参加者ごとの Apple Music 個人ライブラリ同期
 
 ## 実使用前チェック
 

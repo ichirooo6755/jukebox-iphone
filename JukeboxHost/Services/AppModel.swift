@@ -29,6 +29,9 @@ enum HostDisplayMode: String, CaseIterable, Identifiable {
 final class AppModel: ObservableObject {
     let store = JukeboxStore()
     let audioOutput = AudioOutputManager()
+    #if os(iOS)
+    let externalDisplay = ExternalDisplayManager()
+    #endif
 
     @Published private(set) var server: JukeboxServer?
     @Published private(set) var serverStatus: HostServerStatus?
@@ -37,6 +40,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var musicAuthorized = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var serviceAuthStatuses: [ServiceAuthStatus] = []
+    @Published private(set) var displayedHostIP: String?
     @Published var displayMode: HostDisplayMode = .nowPlayingQueue
     @Published private(set) var visualizerLevels: [CGFloat] = Array(repeating: 0.1, count: 32)
     @Published var crossfadeOpacity: Double = 1.0
@@ -46,7 +50,7 @@ final class AppModel: ObservableObject {
     }
 
     var participantLocalURL: String? {
-        let ip = serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
+        let ip = displayedHostIP ?? serverStatus?.hostIP ?? JukeboxServer.localIPAddress()
         guard let ip else { return nil }
         let port = serverStatus?.port ?? Int(JukeboxServer.defaultPort)
         return "http://\(ip):\(port)"
@@ -127,8 +131,16 @@ final class AppModel: ObservableObject {
         musicAuthorized = await AppleMusicSearchService.requestAuthorization()
         await refreshAuthStatuses()
         playbackState = await store.currentState()
+        #if os(iOS)
+        externalDisplay.attach(model: self)
+        externalDisplay.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        #endif
         await startHostServer()
     }
+
+    private var cancellables = Set<AnyCancellable>()
 
     func startHostServer() async {
         guard !isServerRunning else { return }
@@ -150,7 +162,7 @@ final class AppModel: ObservableObject {
             startProgressPolling()
             startVisualizer()
             lifecycle.start(
-                onNetworkRestored: { [weak self] in await self?.restartServerIfNeeded() },
+                onNetworkRestored: { [weak self] in await self?.handleNetworkRestored() },
                 onServerRestartNeeded: { [weak self] in await self?.restartServerIfNeeded() }
             )
         } catch {
@@ -165,9 +177,23 @@ final class AppModel: ObservableObject {
         visualizerTask?.cancel()
         progressTask = nil
         visualizerTask = nil
+        #if os(iOS)
+        externalDisplay.detach()
+        #endif
         await server?.stop()
         server = nil
         isServerRunning = false
+    }
+
+    func refreshJoinAddress() async {
+        displayedHostIP = JukeboxServer.localIPAddress()
+        await refreshStatus()
+        await refreshAuthStatuses()
+    }
+
+    private func handleNetworkRestored() async {
+        await refreshJoinAddress()
+        await restartServerIfNeeded()
     }
 
     func restartServerIfNeeded() async {
@@ -200,7 +226,10 @@ final class AppModel: ObservableObject {
     }
 
     private func refreshStatus() async {
-        let ip = JukeboxServer.localIPAddress() ?? "127.0.0.1"
+        if displayedHostIP == nil {
+            displayedHostIP = JukeboxServer.localIPAddress()
+        }
+        let ip = displayedHostIP ?? JukeboxServer.localIPAddress() ?? "127.0.0.1"
         let clients = await server?.clientCount ?? 0
         await store.setConnectedClients(clients)
         serverStatus = HostServerStatus(
@@ -213,7 +242,7 @@ final class AppModel: ObservableObject {
     }
 
     private func refreshAuthStatuses() async {
-        let ip = JukeboxServer.localIPAddress() ?? "127.0.0.1"
+        let ip = displayedHostIP ?? JukeboxServer.localIPAddress() ?? "127.0.0.1"
         let baseURL = "http://\(ip):\(JukeboxServer.defaultPort)"
         serviceAuthStatuses = await SearchCoordinator.shared.authStatuses(baseURL: baseURL)
     }

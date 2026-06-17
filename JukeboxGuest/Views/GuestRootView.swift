@@ -5,149 +5,98 @@ struct GuestRootView: View {
     @EnvironmentObject private var client: GuestAPIClient
 
     var body: some View {
-        TabView {
-            GuestHomeView()
-                .tabItem { Label("Home", systemImage: "music.note.house") }
-            GuestSearchView()
-                .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            GuestAccountView()
-                .tabItem { Label("Account", systemImage: "person.crop.circle") }
+        ZStack(alignment: .top) {
+            TabView {
+                GuestHomeView()
+                    .tabItem { Label("ホーム", systemImage: "music.note.house.fill") }
+                GuestSearchView()
+                    .tabItem { Label("検索", systemImage: "magnifyingglass") }
+                GuestQueueView()
+                    .tabItem { Label("キュー", systemImage: "music.note.list") }
+                GuestAccountView()
+                    .tabItem { Label("アカウント", systemImage: "person.crop.circle") }
+            }
+            .tint(.pink)
+
+            GuestToastOverlay(message: client.toastMessage)
+                .animation(.easeInOut, value: client.toastMessage)
+        }
+        .sheet(isPresented: $client.showOnboarding) {
+            GuestOnboardingSheet()
+                .interactiveDismissDisabled()
         }
         .task {
             if !client.hostURL.isEmpty {
+                try? await client.ensureParticipant()
                 await client.refreshState()
+                client.reconnectTransport()
             }
         }
     }
 }
 
-struct GuestHomeView: View {
+struct GuestOnboardingSheet: View {
     @EnvironmentObject private var client: GuestAPIClient
-
-    var body: some View {
-        NavigationStack {
-            List {
-                if let current = client.playbackState.current {
-                    Section("Now Playing") {
-                        LabeledContent(current.title, value: current.artist)
-                        LabeledContent("サービス", value: current.service.displayName)
-                    }
-                }
-                Section("再生モード") {
-                    Picker("モード", selection: Binding(
-                        get: { client.playbackState.playbackMode },
-                        set: { mode in Task { await client.setPlaybackMode(mode) } }
-                    )) {
-                        ForEach(QueuePlaybackMode.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                if client.playbackState.playbackMode == .playlistRoulette {
-                    Section("ルーレット") {
-                        ForEach(client.playbackState.playlistLanes) { lane in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(lane.displayName ?? lane.participant)
-                                    .font(.headline)
-                                Text(lane.playlistTitle)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Text("\(lane.position)/\(lane.tracks.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Jukebox")
-            .refreshable { await client.refreshState() }
-        }
-    }
-}
-
-struct GuestSearchView: View {
-    @EnvironmentObject private var client: GuestAPIClient
-    @State private var playlistURL = ""
+    @State private var name = ""
+    @State private var host = ""
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("プレイリスト URL") {
-                    TextField("https://open.spotify.com/playlist/...", text: $playlistURL)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                    Button("URL から追加") {
-                        Task {
-                            do {
-                                try await client.importPlaylistURL(playlistURL)
-                                playlistURL = ""
-                            } catch {
-                                client.errorMessage = error.localizedDescription
-                            }
-                        }
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "music.note.house.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.pink.gradient)
+                        Text("Jukebox に参加")
+                            .font(.title2.bold())
+                        Text("ホストの QR または URL を入力して参加できます")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
                 }
-                if let error = client.errorMessage {
-                    Section { Text(error).foregroundStyle(.red) }
-                }
-            }
-            .navigationTitle("Search")
-        }
-    }
-}
 
-struct GuestAccountView: View {
-    @EnvironmentObject private var client: GuestAPIClient
-
-    var body: some View {
-        NavigationStack {
-            Form {
                 Section("接続") {
-                    TextField("ホスト URL", text: $client.hostURL)
+                    TextField("ホスト URL", text: $host)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
-                    Button("接続") {
-                        Task {
-                            await client.refreshState()
-                            await client.refreshAuth()
+                    Button("ホストを探す") {
+                        Task { await client.discoverHosts() }
+                    }
+                    ForEach(client.discoveredHosts) { item in
+                        Button(item.url) {
+                            host = item.url
                         }
+                        .font(.caption.monospaced())
                     }
                 }
+
                 Section("参加者") {
-                    TextField("ニックネーム", text: $client.nickname)
+                    TextField("ニックネーム（任意）", text: $name)
                 }
-                Section("サービス") {
-                    ForEach(client.authStatuses, id: \.service) { status in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(status.service.displayName)
-                                Spacer()
-                                if status.isAuthenticated {
-                                    Text("OK").foregroundStyle(.green)
-                                } else if status.service == .appleMusic {
-                                    Text("ホスト共有").foregroundStyle(.secondary)
-                                } else if status.loginURL != nil {
-                                    Button("ログイン") {
-                                        Task { await client.login(service: status.service) }
-                                    }
-                                } else {
-                                    Text("未設定").foregroundStyle(.orange)
-                                }
+
+                Section {
+                    Button("参加する") {
+                        Task {
+                            if !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                try? await client.registerNickname(name)
                             }
-                            if let name = status.displayName {
-                                Text(name).font(.caption).foregroundStyle(.secondary)
-                            }
-                            if !status.message.isEmpty {
-                                Text(status.message).font(.caption2).foregroundStyle(.secondary)
+                            if !host.isEmpty {
+                                await client.connectToHost(host)
+                            } else {
+                                client.showOnboarding = false
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.pink)
                 }
             }
-            .navigationTitle("Account")
-            .task { await client.refreshAuth() }
+            .navigationTitle("ようこそ")
         }
     }
 }

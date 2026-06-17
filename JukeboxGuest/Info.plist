@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>同一Wi-Fi上のホストと通信するためにローカルネットワークを使用します</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>あなたの Apple Music ライブラリからプレイリストを読み取り、ホストのキューに追加します</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
@@ -38,5 +40,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

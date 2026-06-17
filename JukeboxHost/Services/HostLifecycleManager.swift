@@ -66,7 +66,9 @@ final class HostLifecycleManager {
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: .main
-        ) { _ in }
+        ) { _ in
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
         #elseif os(macOS)
         foregroundObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,

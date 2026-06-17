@@ -61,6 +61,7 @@
               <option value="youtube">YouTube</option>
             </select>
           </div>
+          <button type="button" id="my-playlists" class="btn" hidden>自分のプレイリストを表示</button>
           <div class="playlist-url-row">
             <input id="playlist-url-input" type="url" placeholder="プレイリスト URL を貼り付け（Spotify / YouTube / Apple Music）" autocomplete="off">
             <button type="button" id="playlist-url-import" class="btn">URLから追加</button>
@@ -93,7 +94,7 @@
         </div>
         <div class="account-card services">
           <h3>サービス</h3>
-          <p class="hint">Apple Music はホスト共有です。検索で選んだ曲IDをホストが MusicKit で再生します。YouTube は参加者ごとにログインできます。</p>
+          <p class="hint">Apple Music のマイプレイリストは <strong>JukeboxGuest</strong> アプリでこの端末の許可を使ってください（Web では不可）。Spotify / YouTube は下のログイン後、Search で自分のプレイリストを表示できます。他サービスから Apple Music へ移行したプレイリストも、移行後に Guest アプリから追加できます。</p>
           <div id="auth-status-list" class="auth-status-list"></div>
         </div>
       </section>

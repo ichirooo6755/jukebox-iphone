@@ -60,11 +60,37 @@
 
 ---
 
+## 追加指示（2026-06-17 ストリーミング認証）
+
+| # | 内容 | 状態 | メモ |
+|---|------|------|------|
+| 34 | Apple Music 参加者ごとにマイライブラリからプレイリストインポート | ✅ | **JukeboxGuest** の MusicKit 許可 + `POST /api/playlists/import-tracks` |
+| 35 | Spotify 自分のプレイリスト一覧インポート | ✅ | `GET /api/playlists/mine?service=spotify` + PWA/Guest Search |
+| 36 | YouTube 参加者ごとログイン + 自分のプレイリスト | ✅ | 既存 OAuth 分離 + `mine=true` 一覧 |
+| 37 | Soundiiz 等で移行した Apple プレイリストの利用 | ✅ | Guest マイライブラリ経由（`docs/APPLE_MUSIC_PARTICIPANT.md`） |
+
+---
+
+## 追加指示（2026-06-17 Guest/Host 強化）
+
+| # | 内容 | 状態 | メモ |
+|---|------|------|------|
+| 38 | Guest アプリを Web と同等機能に | ✅ | 4タブ・WebSocket・キュー操作・曲検索・スキップ投票 |
+| 39 | Guest UI を Apple 風に | ✅ | 大型ジャケット・insetGrouped・ピンクアクセント |
+| 40 | Dynamic Island / ロック画面表示 | ✅ | `JukeboxGuestWidget` Live Activity |
+| 41 | Host QR 自動生成（IP 取得） | ✅ | 起動時 IP で固定、Wi-Fi 変更時のみ手動更新 |
+| 42 | HDMI と音声出力の分離設定 | ✅ | `ExternalDisplayManager` + 音声は `AVRoutePickerView` |
+| 43 | 画面消灯・電源対策 | ✅ | `isIdleTimerDisabled` + `UIBackgroundModes: audio` |
+| 44 | **Web（PWA）を参加者の標準 UI として維持** | ✅方針 | Android 対応・Guest は iOS オプション（`docs/PARTICIPANT_UI.md`） |
+
+---
+
 ## プラットフォーム制約（実装不可・代替運用）
 
 | 項目 | 状態 | 補足 |
 |------|------|------|
-| 参加者ごとの Apple Music 認証 | 制約 | MusicKit はホスト共有のみ |
+| Apple Music マイライブラリ（Web PWA） | 制約 | ブラウザでは個人ライブラリ API 不可 → **JukeboxGuest** を使用 |
+| Apple Music 再生 | ホスト共有 | 曲 ID をホストが MusicKit で再生 |
 | Spotify ホスト内ネイティブ再生 | 制約 | deep link 運用（SDK / Premium 制約） |
 
 ---
@@ -83,10 +109,11 @@
 - 共有: `https://www.youtube.com/playlist?list={playlistId}` を URL パースして ID 抽出
 - `userinfo` / `openid` — 表示名・アイコン（実装済み）
 
-### Apple Music（ホスト MusicKit）
-- `MusicCatalogResourceRequest<Playlist>` — カタログ検索
-- `MusicLibraryRequest<Playlist>` — ホスト端末のライブラリ（要許可）
-- 参加者個別ログインは MusicKit 制約上不可。ホスト共有のまま
+### Apple Music
+- **ホスト**: `MusicCatalogResourceRequest<Playlist>` — カタログ検索・再生
+- **参加者（JukeboxGuest）**: `MusicLibraryRequest<Playlist>` — 端末ごとのマイライブラリ（要許可）
+- 移行ツール（Soundiiz 等）で取り込んだプレイリストも Guest マイライブラリから選択可
+- Web PWA ではマイライブラリ不可（MusicKit JS 制約）
 
 ### 間接連携（参考）
 - **Soundiiz / TuneMyMusic** — サービス間プレイリスト移行（公式 API ではない）
