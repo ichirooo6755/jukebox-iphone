@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0a0a0a">
   <title>Jukebox</title>
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=20260618e">
 </head>
 <body>
   <div id="app">
@@ -19,14 +19,19 @@
 
     <main id="views">
       <section id="view-home" class="view active">
+        <p class="host-notice">🔊 音はホスト（Mac 等）のスピーカーから鳴ります。この画面はリモコンです。</p>
         <div class="mode-switch segmented-control" aria-label="再生モード">
-          <button class="segment active" data-playback-mode="single_track">一曲ずつ</button>
-          <button class="segment" data-playback-mode="playlist_roulette">プレイリスト選択</button>
+          <button type="button" class="segment active" data-playback-mode="single_track">一曲ずつ</button>
+          <button type="button" class="segment" data-playback-mode="playlist_roulette">プレイリスト選択</button>
         </div>
         <div id="playlist-graph" class="playlist-graph" hidden></div>
         <div class="now-playing-card">
-          <img id="np-artwork" class="artwork" src="" alt="" hidden>
-          <div id="np-artwork-placeholder" class="artwork placeholder">♪</div>
+          <div class="artwork-frame" aria-hidden="true">
+            <img id="np-artwork" class="artwork" src="" alt="" hidden>
+            <div id="np-artwork-placeholder" class="artwork placeholder">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+            </div>
+          </div>
           <div class="np-info">
             <p id="np-service" class="service-badge">—</p>
             <h2 id="np-title">接続中...</h2>
@@ -39,9 +44,14 @@
               </div>
             </div>
             <div class="playback-controls">
-              <button id="toggle-playback" class="btn playback primary" aria-label="再生">▶</button>
-              <button id="skip-track" class="btn playback" aria-label="スキップ">⏭</button>
-              <button id="vote-skip" class="btn skip-vote" hidden>スキップに投票 (<span id="skip-votes">0</span>/<span id="skip-required">2</span>)</button>
+              <button id="toggle-playback" class="btn playback primary" aria-label="再生" type="button">
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+              <button id="skip-track" class="btn playback" aria-label="スキップ" type="button">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+              </button>
+              <button id="vote-skip" class="btn skip-vote" type="button" hidden>スキップに投票 (<span id="skip-votes">0</span>/<span id="skip-required">2</span>)</button>
             </div>
           </div>
         </div>
@@ -50,12 +60,12 @@
       <section id="view-search" class="view">
         <div class="search-panel">
           <div id="search-type-segments" class="segmented-control" aria-label="検索タイプ" hidden>
-            <button class="segment active" data-search-type="tracks">曲</button>
-            <button class="segment" data-search-type="playlists">プレイリスト</button>
+            <button type="button" class="segment active" data-search-type="tracks">曲</button>
+            <button type="button" class="segment" data-search-type="playlists">プレイリスト</button>
           </div>
           <div class="search-grid">
-            <input id="search-input" type="search" placeholder="曲名・アーティスト・プレイリストを検索" autocomplete="off">
-            <select id="search-service">
+            <input id="search-input" type="search" enterkeyhint="search" placeholder="曲名・アーティスト・プレイリストを検索" autocomplete="off">
+            <select id="search-service" aria-label="サービス">
               <option value="apple_music">Apple Music</option>
               <option value="spotify">Spotify</option>
               <option value="youtube">YouTube</option>
@@ -63,7 +73,7 @@
           </div>
           <button type="button" id="my-playlists" class="btn" hidden>自分のプレイリストを表示</button>
           <div class="playlist-url-row">
-            <input id="playlist-url-input" type="url" placeholder="プレイリスト URL を貼り付け（Spotify / YouTube / Apple Music）" autocomplete="off">
+            <input id="playlist-url-input" type="url" enterkeyhint="done" placeholder="プレイリスト URL を貼り付け" autocomplete="off">
             <button type="button" id="playlist-url-import" class="btn">URLから追加</button>
           </div>
         </div>
@@ -78,49 +88,67 @@
       <section id="view-account" class="view">
         <div class="account-card">
           <label for="nickname">ニックネーム</label>
-          <input id="nickname" type="text" maxlength="24" placeholder="空白で guest-番号">
-          <button id="save-nickname" class="btn primary">保存</button>
+          <input id="nickname" type="text" maxlength="24" enterkeyhint="done" placeholder="空白で guest-番号">
+          <button id="save-nickname" class="btn primary" type="button">保存</button>
           <p id="account-status" class="muted"></p>
         </div>
         <div class="account-card">
-          <label for="host-url">ホスト URL</label>
-          <input id="host-url" type="url" placeholder="http://192.168.1.10:8765">
+          <p id="account-mode" class="muted">ローカル参加</p>
+          <label for="host-url">ホスト URL / リレー URL</label>
+          <input id="host-url" type="url" enterkeyhint="go" placeholder="http://172.20.10.5:8765 または https://relay.example.com" autocomplete="off">
+          <label for="remote-join-code">リモート参加コード（任意）</label>
+          <input id="remote-join-code" type="text" maxlength="8" enterkeyhint="go" placeholder="例: ABC123" autocomplete="off" autocapitalize="characters">
           <div class="host-discover-row">
             <button id="discover-hosts" type="button" class="btn">ホストを探す</button>
           </div>
           <ul id="discovered-hosts" class="discovered-hosts"></ul>
-          <button id="connect-host" class="btn">接続</button>
+          <button id="connect-host" class="btn primary" type="button">ローカル接続</button>
+          <button id="connect-remote" class="btn" type="button">リモート接続</button>
           <p id="sync-metrics" class="muted metrics-line"></p>
+          <p id="web-version" class="muted metrics-line"></p>
         </div>
         <div class="account-card services">
           <h3>サービス</h3>
-          <p class="hint">Apple Music のマイプレイリストは <strong>JukeboxGuest</strong> アプリでこの端末の許可を使ってください（Web では不可）。Spotify / YouTube は下のログイン後、Search で自分のプレイリストを表示できます。他サービスから Apple Music へ移行したプレイリストも、移行後に Guest アプリから追加できます。</p>
+          <p class="hint">Apple Music のマイプレイリストは <strong>JukeboxGuest</strong> アプリでこの端末の許可を使ってください（Web では不可）。Spotify / YouTube は下のログイン後、Search で自分のプレイリストを表示できます。</p>
           <div id="auth-status-list" class="auth-status-list"></div>
         </div>
       </section>
     </main>
 
-    <nav class="tab-bar">
-      <button class="tab active" data-tab="home">Home</button>
-      <button class="tab" data-tab="search">Search</button>
-      <button class="tab" data-tab="queue">Queue</button>
-      <button class="tab" data-tab="account">Account</button>
+    <nav class="tab-bar" aria-label="メイン">
+      <button type="button" class="tab active" data-tab="home">Home</button>
+      <button type="button" class="tab" data-tab="search">Search</button>
+      <button type="button" class="tab" data-tab="queue">Queue</button>
+      <button type="button" class="tab" data-tab="account">Account</button>
     </nav>
+  </div>
+
+  <div id="keyboard-bar" class="keyboard-bar" hidden>
+    <button type="button" id="keyboard-done" class="btn">完了</button>
+  </div>
+
+  <div id="service-connect" class="onboarding" hidden>
+    <div class="onboarding-card service-connect-card">
+      <h2>音楽サービスに接続</h2>
+      <p class="muted">曲を検索するサービスを1つ選んでログインしてください。Apple Music はホストのカタログ検索のためログイン不要です。</p>
+      <div id="service-connect-buttons" class="service-connect-buttons"></div>
+      <button type="button" id="service-connect-apple" class="btn">Apple Music を使う（ログイン不要）</button>
+    </div>
   </div>
 
   <div id="onboarding" class="onboarding" hidden>
     <div class="onboarding-card">
       <h2>Jukebox に参加</h2>
-      <p class="muted">表示名を入力するか、空白のまま参加できます。Spotify / YouTube は Account タブから後で連携できます。</p>
-      <input id="onboarding-name" type="text" maxlength="24" placeholder="ニックネーム（任意）" autocomplete="nickname">
+      <p class="muted">表示名を入力するか、空白のまま参加できます。</p>
+      <input id="onboarding-name" type="text" maxlength="24" enterkeyhint="done" placeholder="ニックネーム（任意）" autocomplete="nickname">
       <button type="button" id="onboarding-join" class="btn primary">参加する</button>
     </div>
   </div>
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="/js/api.js" type="module"></script>
-  <script src="/js/ws.js" type="module"></script>
-  <script src="/js/app.js" type="module"></script>
+  <script src="/js/api.js?v=20260618e" type="module"></script>
+  <script src="/js/ws.js?v=20260618e" type="module"></script>
+  <script src="/js/app.js?v=20260618e" type="module"></script>
 </body>
 </html>

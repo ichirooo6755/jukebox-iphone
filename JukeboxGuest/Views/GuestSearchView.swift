@@ -37,6 +37,7 @@ struct GuestSearchView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .listStyle(.insetGrouped)
             .navigationTitle("検索")
             .searchable(text: $query, prompt: searchPrompt)

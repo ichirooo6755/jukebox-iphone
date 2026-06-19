@@ -58,14 +58,16 @@ struct ParticipantQRCodeCard: View {
     var localURL: String? = nil
     var qrSize: CGFloat = 160
     var showsCopyButton = true
+    var title: String? = nil
+    var caption: String? = nil
 
     var body: some View {
         VStack(spacing: 12) {
-            Label("参加者用 QR", systemImage: "qrcode")
+            Label(title ?? "参加者用 QR", systemImage: "qrcode")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("同じ Wi-Fi の端末で QR を1回スキャンすると、参加画面が開きます")
+            Text(caption ?? "同じ Wi-Fi の端末で QR を1回スキャンすると、参加画面が開きます")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)

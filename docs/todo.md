@@ -122,8 +122,50 @@
 
 ---
 
-## 旧メモ（アーカイブ）
 
-1. ゲスト側のアプリを作成する。→ #24 ✅
+---
+
+## 追加指示（2026-06-18 Web / ホスト UI・安定性）
+
+| # | 内容 | 状態 | メモ |
+|---|------|------|------|
+| 45 | Web PWA: ジャケ写を1枠に（縦連続防止） | ✅ | `artwork-frame` + CSS |
+| 46 | Safari: キーボード「完了」バー・下はみ出し対策 | ✅ | `visualViewport` + `browser-mode` |
+| 47 | 再生/スキップを SVG アイコン化（絵文字廃止） | ✅ | `web/index.html` |
+| 48 | 操作後の状態同期・5秒ラグ軽減 | ✅ | `refreshStateFromServer()` + 1秒 HTTP ポーリング |
+| 49 | キュー先頭に「再生中」行表示 | ✅ | `.playing-now` |
+| 50 | QR→再生まで1回のサービス接続画面 | ✅ | `#service-connect` オンボーディング後 |
+| 51 | Account 認証状態の読み込み遅延改善 | ✅ | `api.js` 30秒キャッシュ |
+| 52 | YouTube キュー追加後に消える問題 | ✅ | `peekFirst` + 再生成功後 `removeItem` |
+| 53 | Apple Music ライブラリのみ検索になる問題 | 🟡 | カタログ失敗時ライブラリフォールバック + `lastCatalogError` 表示。MusicKit entitlement 未設定時はカタログ不可 |
+| 54 | Spotify 検索・OAuth | 🟡 | 期限切れトークン廃棄→client credentials。実機 OAuth は #1 要検証 |
+| 55 | ホスト Mac UI: 再生バーをジャケット下に | ✅ | `NowPlayingQueueView.artworkColumn` |
+| 56 | QR を右下に常駐 | ✅ | `HostPersistentQRPanel` |
+| 57 | インターネット共有（テザリング）参加 | 🟡 | LAN IP 直指定で運用可。mDNS は不安定 |
+| 58 | Guest ネイティブ: キーボード・ジャケットクリップ | ✅ | `scrollDismissesKeyboard`、GuestHomeView |
+| 59 | キュー追加成功だが再生失敗で API 500 になる問題 | ✅ | `tryStartPlaybackIfIdle()` |
+| 60 | Guest オンボーディングでホスト未入力でも閉じられる | ✅ | ホスト URL 必須に変更 |
+
+### 実機検証が必要（コードのみでは完了不可）
+
+| 項目 | Issue |
+|------|-------|
+| OAuth + プレイリスト実機検証 | #1 |
+| 24h 耐久・Wi-Fi 復旧 | #2 |
+| 同期レイテンシ・5人同時 | #4 |
+| 同一 Wi-Fi 不要のリモート参加 | #5 | ✅ | `relay-server` + `docs/REMOTE_JOIN.md` |
+
+---
+
+## 追加指示（2026-06-18 Issue #5 リモート参加）
+
+| # | 内容 | 状態 | メモ |
+|---|------|------|------|
+| 61 | リレーサーバー（ホスト外向き WS + API プロキシ） | ✅ | `relay-server/main.py` |
+| 62 | ホスト `RemoteRelayClient` + リモート QR 表示 | ✅ | `RELAY_BASE_URL` |
+| 63 | PWA リモート参加モード | ✅ | `?room=CODE` / Account リモート接続 |
+| 64 | ドキュメント | ✅ | `docs/REMOTE_JOIN.md` |
+
+## 旧メモ（アーカイブ）
 2. ラズパイを有効活用する構成を考えて使用する。→ #25 ✅
 3. UIの改善 → #26 ✅

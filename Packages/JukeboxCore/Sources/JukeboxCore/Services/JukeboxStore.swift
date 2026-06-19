@@ -169,7 +169,7 @@ public actor JukeboxStore {
         broadcast(.state(await currentState()))
 
         if nowPlaying == nil, playbackMode == .playlistRoulette {
-            try await playNext()
+            await tryStartPlaybackIfIdle()
         }
         return lane
     }
@@ -244,9 +244,7 @@ public actor JukeboxStore {
         broadcast(.queueUpdated(queue))
         broadcast(.state(await currentState()))
 
-        if nowPlaying == nil {
-            try await playNext()
-        }
+        await tryStartPlaybackIfIdle()
         return item
     }
 
@@ -277,7 +275,7 @@ public actor JukeboxStore {
         broadcast(.state(await currentState()))
 
         if nowPlaying == nil {
-            try await playNext()
+            await tryStartPlaybackIfIdle()
         }
         return added
     }
@@ -366,9 +364,18 @@ public actor JukeboxStore {
         broadcast(.state(await currentState()))
 
         if nowPlaying == nil, !added.isEmpty {
-            try await playNext()
+            await tryStartPlaybackIfIdle()
         }
         return added
+    }
+
+    private func tryStartPlaybackIfIdle() async {
+        guard nowPlaying == nil else { return }
+        do {
+            try await playNext()
+        } catch {
+            // キュー追加は成功のまま。再生失敗時は playNext が状態を配信済み。
+        }
     }
 
     public func playNext() async throws {
@@ -382,7 +389,7 @@ public actor JukeboxStore {
             return
         }
 
-        guard let next = try database.popFirst() else {
+        guard let next = try database.peekFirst() else {
             nowPlaying = nil
             isPlaying = false
             elapsed = 0
@@ -393,11 +400,21 @@ public actor JukeboxStore {
 
         nowPlaying = next
         isPlaying = true
+        elapsed = 0
         persistSession()
         broadcast(.state(await currentState()))
 
-        if let playback {
-            try await playback.play(item: next)
+        do {
+            try await attemptPlayback(next)
+            try database.removeItem(id: next.id)
+            broadcast(.state(await currentState()))
+        } catch {
+            nowPlaying = nil
+            isPlaying = false
+            elapsed = 0
+            persistSession()
+            broadcast(.state(await currentState()))
+            throw error
         }
     }
 
@@ -436,8 +453,19 @@ public actor JukeboxStore {
         persistSession()
         broadcast(.state(await currentState()))
 
-        if let playback {
-            try await playback.play(item: next)
+        try await attemptPlayback(next)
+    }
+
+    private func attemptPlayback(_ item: QueueItem) async throws {
+        guard let playback else { return }
+        do {
+            try await playback.play(item: item)
+        } catch {
+            isPlaying = false
+            elapsed = 0
+            persistSession()
+            broadcast(.state(await currentState()))
+            throw error
         }
     }
 

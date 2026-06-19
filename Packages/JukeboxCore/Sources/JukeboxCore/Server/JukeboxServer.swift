@@ -568,7 +568,13 @@ private struct StaticWebFilesHandler: HTTPHandler, Sendable {
     let root: URL
 
     func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        let trimmed = request.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var trimmed = request.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if let queryStart = trimmed.firstIndex(of: "?") {
+            trimmed = String(trimmed[..<queryStart])
+        }
+        if let fragmentStart = trimmed.firstIndex(of: "#") {
+            trimmed = String(trimmed[..<fragmentStart])
+        }
         let relativePath = trimmed.isEmpty ? "index.html" : trimmed
 
         guard !relativePath.contains("..") else {

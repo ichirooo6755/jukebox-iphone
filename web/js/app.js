@@ -1,16 +1,24 @@
 import {
   api,
   artworkSrc,
+  configureRemoteJoin,
   discoverHosts,
   ensureParticipant,
   getBaseURL,
+  getJoinCode,
   getNickname,
+  getPreferredService,
+  getRelayOrigin,
   getServiceProfile,
   isOnboarded,
+  isRemoteMode,
+  isServiceConnected,
   saveServiceProfiles,
   setBaseURL,
   setNickname,
   setOnboarded,
+  setPreferredService,
+  setServiceConnected,
 } from './api.js';
 import { connect, onEvent } from './ws.js';
 
@@ -58,14 +66,26 @@ const els = {
   discoveredHosts: document.getElementById('discovered-hosts'),
   syncMetrics: document.getElementById('sync-metrics'),
   accountStatus: document.getElementById('account-status'),
+  accountMode: document.getElementById('account-mode'),
+  remoteJoinCode: document.getElementById('remote-join-code'),
   authStatusList: document.getElementById('auth-status-list'),
   onboarding: document.getElementById('onboarding'),
   onboardingName: document.getElementById('onboarding-name'),
   onboardingJoin: document.getElementById('onboarding-join'),
   toast: document.getElementById('toast'),
+  keyboardBar: document.getElementById('keyboard-bar'),
+  keyboardDone: document.getElementById('keyboard-done'),
+  webVersion: document.getElementById('web-version'),
+  serviceConnect: document.getElementById('service-connect'),
+  serviceConnectButtons: document.getElementById('service-connect-buttons'),
+  serviceConnectApple: document.getElementById('service-connect-apple'),
 };
 
 let toastTimer = null;
+let statePollTimer = null;
+let elapsedTimer = null;
+let lastServerElapsed = 0;
+let lastElapsedSync = 0;
 
 function formatTime(sec) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -97,11 +117,133 @@ function artworkMarkup(item, size = 56) {
   return `<img src="${escapeHtml(src)}" alt="" loading="lazy" width="${size}" height="${size}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'artwork placeholder',style:'width:${size}px;height:${size}px;font-size:1.5rem',textContent:'♪'}))">`;
 }
 
+function setPlaybackIcon(playing) {
+  const playIcon = els.togglePlayback.querySelector('.icon-play');
+  const pauseIcon = els.togglePlayback.querySelector('.icon-pause');
+  if (playIcon) playIcon.hidden = playing;
+  if (pauseIcon) pauseIcon.hidden = !playing;
+  els.togglePlayback.setAttribute('aria-label', playing ? '一時停止' : '再生');
+}
+
+function syncElapsedFromServer(elapsed) {
+  state.elapsed = elapsed || 0;
+  lastServerElapsed = state.elapsed;
+  lastElapsedSync = Date.now();
+}
+
+async function refreshStateFromServer() {
+  const payload = await api.state();
+  applyState(payload);
+  return payload;
+}
+
+function startStatePolling() {
+  if (statePollTimer) return;
+  statePollTimer = setInterval(async () => {
+    try {
+      await refreshStateFromServer();
+    } catch (_) {
+      // ignore transient errors
+    }
+  }, 1000);
+}
+
+function startElapsedTicker() {
+  if (elapsedTimer) return;
+  elapsedTimer = setInterval(() => {
+    if (!state.isPlaying || !state.nowPlaying) return;
+    const drift = (Date.now() - lastElapsedSync) / 1000;
+    state.elapsed = lastServerElapsed + drift;
+    renderNowPlaying(false);
+  }, 250);
+}
+
+function setupViewportInsets() {
+  const update = () => {
+    const vv = window.visualViewport;
+    if (!vv) {
+      document.documentElement.style.setProperty('--keyboard-inset', '0px');
+      return;
+    }
+    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`);
+    if (els.keyboardBar) {
+      const focused = document.activeElement;
+      const editing = focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement || focused instanceof HTMLSelectElement;
+      els.keyboardBar.hidden = !(inset > 0 && editing);
+    }
+  };
+  window.visualViewport?.addEventListener('resize', update);
+  window.visualViewport?.addEventListener('scroll', update);
+  update();
+}
+
+function setupKeyboardBar() {
+  const focusable = 'input, select, textarea';
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.matches(focusable)) return;
+    if (els.keyboardBar) els.keyboardBar.hidden = false;
+    setTimeout(() => {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 120);
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const active = document.activeElement;
+      const editing = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement;
+      if (!editing && els.keyboardBar) els.keyboardBar.hidden = true;
+    }, 80);
+  });
+  els.keyboardDone?.addEventListener('click', () => {
+    document.activeElement?.blur();
+    if (els.keyboardBar) els.keyboardBar.hidden = true;
+  });
+}
+
+function detectBrowserMode() {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  document.body.classList.toggle('browser-mode', !standalone);
+}
+
+async function loadWebVersion() {
+  if (!els.webVersion) return;
+  try {
+    const res = await fetch('/version.txt', { cache: 'no-store' });
+    if (res.ok) {
+      const text = (await res.text()).trim();
+      els.webVersion.textContent = `Web UI: ${text}`;
+    }
+  } catch {
+    els.webVersion.textContent = 'Web UI: unknown';
+  }
+}
+
+function setupKeyboardDismiss() {
+  document.getElementById('views')?.addEventListener('pointerdown', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest('input, select, textarea, button, a, label')) return;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+}
+
+function setupArtworkFallback() {
+  els.npArtwork.addEventListener('error', () => {
+    els.npArtwork.hidden = true;
+    els.npPlaceholder.hidden = false;
+  });
+}
+
 function applyState(payload) {
   const prevId = state.nowPlaying?.music_id;
   state.nowPlaying = payload.current;
   state.queue = payload.queue || [];
-  state.elapsed = payload.elapsed || 0;
+  syncElapsedFromServer(payload.elapsed || 0);
   state.isPlaying = payload.is_playing;
   state.skipVote = payload.skip_vote || { votes: 0, required: 2, voters: [] };
   state.playbackMode = payload.playback_mode || 'single_track';
@@ -123,8 +265,7 @@ function renderNowPlaying(trackChanged = false) {
     card.classList.add('track-change');
   }
 
-  els.togglePlayback.textContent = state.isPlaying ? '⏸' : '▶';
-  els.togglePlayback.setAttribute('aria-label', state.isPlaying ? '一時停止' : '再生');
+  setPlaybackIcon(state.isPlaying);
 
   if (!current) {
     els.npTitle.textContent = '再生待ち';
@@ -156,6 +297,7 @@ function renderNowPlaying(trackChanged = false) {
     els.npArtwork.hidden = false;
     els.npPlaceholder.hidden = true;
   } else {
+    els.npArtwork.removeAttribute('src');
     els.npArtwork.hidden = true;
     els.npPlaceholder.hidden = false;
   }
@@ -167,47 +309,63 @@ function renderNowPlaying(trackChanged = false) {
 
 function renderQueue() {
   els.queueList.innerHTML = '';
-  if (!state.queue.length) {
+  const rows = [];
+  if (state.nowPlaying) {
+    rows.push({ item: state.nowPlaying, playing: true, queueId: null });
+  }
+  state.queue.forEach((item) => {
+    if (state.nowPlaying && item.music_id === state.nowPlaying.music_id && item.title === state.nowPlaying.title) {
+      return;
+    }
+    rows.push({ item, playing: false, queueId: item.id });
+  });
+
+  if (!rows.length) {
     els.queueList.innerHTML = '<li class="empty">キューは空です</li>';
     return;
   }
 
-  state.queue.forEach((item) => {
+  rows.forEach(({ item, playing, queueId }) => {
     const li = document.createElement('li');
-    li.className = 'queue-item';
-    li.draggable = true;
-    li.dataset.id = item.id;
+    li.className = `queue-item${playing ? ' playing-now' : ''}`;
+    if (queueId != null) {
+      li.draggable = true;
+      li.dataset.id = queueId;
+    }
     li.innerHTML = `
-      <span class="drag-handle">≡</span>
+      <span class="drag-handle">${playing ? '♪' : '≡'}</span>
       ${artworkMarkup(item)}
       <div class="meta">
-        <h3>${escapeHtml(item.title)}</h3>
+        <h3>${escapeHtml(item.title)}${playing ? ' <span class="kind-badge">再生中</span>' : ''}</h3>
         <p>${escapeHtml(item.artist)} · ${serviceLabel(item.service)} · ${escapeHtml(item.added_by)}</p>
       </div>
-      <button class="btn icon remove" aria-label="削除">×</button>
+      ${playing ? '' : '<button class="btn icon remove" aria-label="削除">×</button>'}
     `;
 
-    li.querySelector('.remove').addEventListener('click', async () => {
-      await api.removeFromQueue(item.id);
-      showToast('キューから削除しました');
-    });
+    if (!playing) {
+      li.querySelector('.remove').addEventListener('click', async () => {
+        await api.removeFromQueue(queueId);
+        await refreshStateFromServer();
+        showToast('キューから削除しました');
+      });
 
-    li.addEventListener('dragstart', () => li.classList.add('dragging'));
-    li.addEventListener('dragend', () => li.classList.remove('dragging'));
-    li.addEventListener('dragover', (e) => e.preventDefault());
-    li.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      const dragging = document.querySelector('.queue-item.dragging');
-      if (!dragging || dragging === li) return;
-      const items = [...els.queueList.querySelectorAll('.queue-item')];
-      const from = items.indexOf(dragging);
-      const to = items.indexOf(li);
-      if (from < 0 || to < 0) return;
-      const order = state.queue.map((q) => q.id);
-      const [moved] = order.splice(from, 1);
-      order.splice(to, 0, moved);
-      await api.reorderQueue(order);
-    });
+      li.addEventListener('dragstart', () => li.classList.add('dragging'));
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+      li.addEventListener('dragover', (e) => e.preventDefault());
+      li.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const dragging = document.querySelector('.queue-item.dragging');
+        if (!dragging || dragging === li) return;
+        const items = [...els.queueList.querySelectorAll('.queue-item[draggable="true"]')];
+        const from = items.indexOf(dragging);
+        const to = items.indexOf(li);
+        if (from < 0 || to < 0) return;
+        const order = state.queue.map((q) => q.id);
+        const [moved] = order.splice(from, 1);
+        order.splice(to, 0, moved);
+        await api.reorderQueue(order);
+      });
+    }
 
     els.queueList.appendChild(li);
   });
@@ -369,7 +527,13 @@ async function addSearchResult(item) {
     duration: item.duration || 0,
     added_by: addedBy,
   });
-  showToast(`「${item.title}」をキューに追加しました`);
+  await refreshStateFromServer();
+  const queued = state.queue?.length > 0;
+  if (queued && !state.isPlaying) {
+    showToast(`「${item.title}」をキューに追加（再生を開始できませんでした）`);
+  } else {
+    showToast(`「${item.title}」をキューに追加しました`);
+  }
 }
 
 let searchTimer = null;
@@ -440,12 +604,14 @@ async function runSearch() {
 function setupTabs() {
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
+      document.activeElement?.blur();
       document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
       document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById(`view-${tab.dataset.tab}`).classList.add('active');
       if (tab.dataset.tab === 'account') {
         refreshSyncMetrics();
+        loadWebVersion();
       }
     });
   });
@@ -453,7 +619,34 @@ function setupTabs() {
 
 function setupAccount() {
   els.nickname.value = getNickname();
-  els.hostUrl.value = getBaseURL();
+  els.hostUrl.value = isRemoteMode() ? getRelayOrigin() : getBaseURL();
+  if (els.remoteJoinCode) {
+    els.remoteJoinCode.value = getJoinCode();
+  }
+  if (els.accountMode) {
+    els.accountMode.textContent = isRemoteMode()
+      ? `リモート参加（コード ${getJoinCode()}）`
+      : 'ローカル参加';
+  }
+
+  document.getElementById('connect-remote')?.addEventListener('click', async () => {
+    const origin = els.hostUrl.value.trim();
+    const code = els.remoteJoinCode?.value.trim();
+    if (!origin || !code) {
+      els.accountStatus.textContent = 'リレー URL と参加コードを入力してください';
+      return;
+    }
+    configureRemoteJoin(origin, code);
+    connect();
+    try {
+      await refreshStateFromServer();
+      els.accountMode.textContent = `リモート参加（コード ${getJoinCode()}）`;
+      els.accountStatus.textContent = 'リモート接続しました';
+      await refreshSyncMetrics();
+    } catch (err) {
+      els.accountStatus.textContent = `リモート接続失敗: ${err.message}`;
+    }
+  });
 
   document.getElementById('save-nickname').addEventListener('click', async () => {
     const name = els.nickname.value.trim();
@@ -474,7 +667,7 @@ function setupAccount() {
     setBaseURL(url);
     connect();
     try {
-      await api.state();
+      await refreshStateFromServer();
       els.accountStatus.textContent = '接続しました';
       await refreshSyncMetrics();
     } catch (err) {
@@ -505,7 +698,7 @@ function setupAccount() {
           setBaseURL(button.dataset.url);
           connect();
           try {
-            await api.state();
+            await refreshStateFromServer();
             els.accountStatus.textContent = `${button.dataset.url} に接続しました`;
             await refreshSyncMetrics();
           } catch (err) {
@@ -594,6 +787,7 @@ function setupSearch() {
   els.togglePlayback.addEventListener('click', async () => {
     try {
       await api.togglePlayback();
+      await refreshStateFromServer();
     } catch (err) {
       showToast(`再生エラー: ${err.message}`);
     }
@@ -602,6 +796,7 @@ function setupSearch() {
   els.skipTrack.addEventListener('click', async () => {
     try {
       await api.skipTrack();
+      await refreshStateFromServer();
     } catch (err) {
       showToast(`スキップエラー: ${err.message}`);
     }
@@ -610,6 +805,7 @@ function setupSearch() {
   els.voteSkip.addEventListener('click', async () => {
     try {
       await api.voteSkip(getNickname());
+      await refreshStateFromServer();
     } catch (err) {
       console.error(err);
     }
@@ -630,6 +826,74 @@ function finishOnboarding({ toastMessage } = {}) {
   setBaseURL(getBaseURL());
   hideOnboardingOverlay();
   if (toastMessage) showToast(toastMessage);
+  if (!isServiceConnected()) {
+    showServiceConnectOverlay();
+  }
+}
+
+function hideServiceConnectOverlay() {
+  if (!els.serviceConnect) return;
+  els.serviceConnect.hidden = true;
+  els.serviceConnect.setAttribute('aria-hidden', 'true');
+}
+
+function showServiceConnectOverlay() {
+  if (!els.serviceConnect) return;
+  els.serviceConnect.hidden = false;
+  els.serviceConnect.removeAttribute('aria-hidden');
+  renderServiceConnectButtons();
+}
+
+async function renderServiceConnectButtons() {
+  if (!els.serviceConnectButtons) return;
+  els.serviceConnectButtons.innerHTML = '<p class="muted">サービス状態を読み込み中…</p>';
+  try {
+    await ensureParticipant();
+    const statuses = await api.authStatus(undefined, { force: true });
+    els.serviceConnectButtons.innerHTML = '';
+    statuses
+      .filter((status) => status.service === 'spotify' || status.service === 'youtube')
+      .forEach((status) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn primary';
+        btn.textContent = status.is_authenticated
+          ? `${serviceLabel(status.service)} 接続済み（続行）`
+          : `${serviceLabel(status.service)} にログイン`;
+        btn.addEventListener('click', () => {
+          setPreferredService(status.service);
+          if (status.is_authenticated) {
+            setServiceConnected(true);
+            hideServiceConnectOverlay();
+            els.searchService.value = status.service;
+            updateSearchMode();
+            activateTab('search');
+            showToast(`${serviceLabel(status.service)} で検索できます`);
+            return;
+          }
+          if (!status.login_url) {
+            showToast(status.message || 'ログイン URL を取得できません');
+            return;
+          }
+          window.location.href = authLoginURL(status.login_url, 'connect');
+        });
+        els.serviceConnectButtons.appendChild(btn);
+      });
+  } catch (err) {
+    els.serviceConnectButtons.innerHTML = `<p class="muted">読み込み失敗: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function setupServiceConnect() {
+  els.serviceConnectApple?.addEventListener('click', () => {
+    setPreferredService('apple_music');
+    setServiceConnected(true);
+    hideServiceConnectOverlay();
+    els.searchService.value = 'apple_music';
+    updateSearchMode();
+    activateTab('search');
+    showToast('Apple Music（ホストカタログ）で検索できます');
+  });
 }
 
 function hideOnboardingOverlay() {
@@ -647,7 +911,11 @@ function showOnboardingOverlay() {
 function setupOnboarding() {
   const params = new URLSearchParams(window.location.search);
   const hostParam = params.get('host');
-  if (hostParam) {
+  const roomCode = params.get('room');
+  if (roomCode) {
+    const relayOrigin = params.get('relay') || getRelayOrigin() || window.location.origin;
+    configureRemoteJoin(relayOrigin, roomCode);
+  } else if (hostParam) {
     setBaseURL(hostParam);
   } else if (!localStorage.getItem('jukebox_host_url')) {
     setBaseURL(window.location.origin);
@@ -655,22 +923,37 @@ function setupOnboarding() {
 
   const authService = params.get('auth');
   const authOk = params.get('ok') === '1';
-  cleanQueryParams('onboard', 'auth', 'ok', 'join', 'tab');
+  cleanQueryParams('onboard', 'auth', 'ok', 'join', 'tab', 'room', 'relay');
 
   if (authService) {
     setOnboarded();
     hideOnboardingOverlay();
+    hideServiceConnectOverlay();
+    if (authOk) {
+      setPreferredService(authService);
+      setServiceConnected(true);
+    }
     showToast(
       authOk
         ? `${serviceLabel(authService)} にログインしました`
         : `${serviceLabel(authService)} のログインに失敗しました`
     );
-    activateTab('account');
+    if (authOk) {
+      els.searchService.value = authService;
+      updateSearchMode();
+      activateTab('search');
+    } else {
+      activateTab('account');
+    }
+    refreshAuthStatus().catch(() => {});
     return;
   }
 
   if (isOnboarded()) {
     hideOnboardingOverlay();
+    if (!isServiceConnected()) {
+      showServiceConnectOverlay();
+    }
     return;
   }
 
@@ -709,9 +992,9 @@ function activateTab(tabName) {
   target?.click();
 }
 
-function authLoginURL(loginURL) {
+function authLoginURL(loginURL, returnTo = 'account') {
   const url = new URL(loginURL, getBaseURL());
-  url.searchParams.set('return', 'account');
+  url.searchParams.set('return', returnTo);
   return url.href;
 }
 
@@ -730,9 +1013,10 @@ function renderAuthAction(status) {
 
 async function refreshAuthStatus() {
   if (!els.authStatusList) return;
+  els.authStatusList.innerHTML = '<p class="muted">サービス状態を読み込み中…</p>';
   try {
     await ensureParticipant();
-    const statuses = await api.authStatus();
+    const statuses = await api.authStatus(undefined, { force: true });
     saveServiceProfiles(statuses);
     els.authStatusList.innerHTML = '';
     statuses.forEach((status) => {
@@ -768,6 +1052,9 @@ function setupConnection() {
       els.connection.textContent = event.online ? '接続中' : '再接続中...';
       els.connection.classList.toggle('online', event.online);
       els.connection.classList.toggle('offline', !event.online);
+      if (event.online) {
+        refreshStateFromServer().catch(() => {});
+      }
       return;
     }
     if (event.type === 'state') {
@@ -789,12 +1076,21 @@ function escapeHtml(str) {
 }
 
 async function bootstrap() {
+  detectBrowserMode();
   setupTabs();
   setupAccount();
   setupSearch();
   setupPlaybackMode();
   setupConnection();
   setupOnboarding();
+  setupServiceConnect();
+  setupViewportInsets();
+  setupKeyboardBar();
+  setupKeyboardDismiss();
+  setupArtworkFallback();
+  startStatePolling();
+  startElapsedTicker();
+  loadWebVersion();
 
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab') || (params.get('auth') ? 'account' : null);
@@ -824,6 +1120,12 @@ async function bootstrap() {
 
   connect();
   await refreshSyncMetrics();
+
+  const preferred = getPreferredService();
+  if (preferred) {
+    els.searchService.value = preferred;
+    updateSearchMode();
+  }
 }
 
 bootstrap();

@@ -1,5 +1,6 @@
 import JukeboxCore
 import SwiftUI
+import UIKit
 
 struct GuestRootView: View {
     @EnvironmentObject private var client: GuestAPIClient
@@ -81,14 +82,15 @@ struct GuestOnboardingSheet: View {
                 Section {
                     Button("参加する") {
                         Task {
+                            let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmedHost.isEmpty else {
+                                client.toastMessage = "ホスト URL を入力してください"
+                                return
+                            }
                             if !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 try? await client.registerNickname(name)
                             }
-                            if !host.isEmpty {
-                                await client.connectToHost(host)
-                            } else {
-                                client.showOnboarding = false
-                            }
+                            await client.connectToHost(trimmedHost)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -96,7 +98,16 @@ struct GuestOnboardingSheet: View {
                     .tint(.pink)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("ようこそ")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完了") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
+            }
         }
     }
 }

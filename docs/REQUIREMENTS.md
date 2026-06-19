@@ -35,6 +35,7 @@
 - Spotify / YouTube OAuth の Redirect URI は LAN IP 不可のため、Netlify の HTTPS コールバックを使用。
 - **24時間連続稼働**は復旧機構・セルフテスト API・耐久ログ UI まで実装済み。実機24hの結果記録のみ手動（`docs/durability-test.md`）。
 - **ホスト自動発見**は PWA の「ホストを探す」（`Jukebox.local` + `/api/discover`）で対応。
+- **リモート参加**（同一 Wi-Fi 不要）は `relay-server` + `RELAY_BASE_URL`（`docs/REMOTE_JOIN.md`）。
 
 ## 未実装
 

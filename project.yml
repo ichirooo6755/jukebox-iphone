@@ -43,8 +43,10 @@ targets:
           set -e
           DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web"
           rm -rf "$DEST"
-          ditto "${SRCROOT}/web" "$DEST"
+          COPYFILE_DISABLE=1 ditto --norsrc "${SRCROOT}/web" "$DEST"
           rm -rf "$DEST/landing/.netlify"
+          xattr -cr "$DEST"
+          xattr -cr "${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}"
   JukeboxHostMac:
     type: application
     platform: macOS
@@ -78,8 +80,10 @@ targets:
           set -e
           DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web"
           rm -rf "$DEST"
-          ditto "${SRCROOT}/web" "$DEST"
+          COPYFILE_DISABLE=1 ditto --norsrc "${SRCROOT}/web" "$DEST"
           rm -rf "$DEST/landing/.netlify"
+          xattr -cr "$DEST"
+          xattr -cr "${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}"
   JukeboxGuest:
     type: application
     platform: iOS

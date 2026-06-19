@@ -6,29 +6,43 @@ import AppKit
 import UIKit
 #endif
 
-struct HostNetworkBanner: View {
+struct HostPersistentQRPanel: View {
+    let joinURL: String
     let localURL: String?
-    let joinURL: String?
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
-        if let localURL {
-            VStack(alignment: .leading, spacing: 4) {
-                Label("この端末の IP", systemImage: "wifi")
+        Button {
+            onTap?()
+        } label: {
+            VStack(alignment: .trailing, spacing: 6) {
+                Label("参加 QR", systemImage: "qrcode")
                     .font(.caption.weight(.semibold))
-                Text(localURL)
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
-                if let joinURL, joinURL != localURL {
-                    Text("QR: \(joinURL)")
+                    .foregroundStyle(.white.opacity(0.85))
+
+                QRCodeImage(content: joinURL, size: 92)
+
+                Text(joinURL)
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+                    .frame(maxWidth: 148, alignment: .trailing)
+
+                if let localURL, localURL != joinURL {
+                    Text("LAN: \(localURL)")
                         .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .lineLimit(2)
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(1)
+                        .frame(maxWidth: 148, alignment: .trailing)
                 }
             }
-            .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(10)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("参加者用 QR コード")
+        .accessibilityHint("タップで拡大表示")
     }
 }
 
@@ -36,7 +50,6 @@ struct DisplayContainerView: View {
     @EnvironmentObject private var model: AppModel
     @State private var showParticipantQR = false
     @State private var showDurability = false
-    @State private var didPresentInitialQR = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -68,16 +81,16 @@ struct DisplayContainerView: View {
             displayModeButton
                 .padding(16)
 
-            participantQRButton
+            if let joinURL = model.participantURL {
+                HostPersistentQRPanel(
+                    joinURL: joinURL,
+                    localURL: model.participantLocalURL
+                ) {
+                    showParticipantQR = true
+                }
                 .padding(16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-            HostNetworkBanner(
-                localURL: model.participantLocalURL,
-                joinURL: model.participantURL
-            )
-            .padding(16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showParticipantQR) {
@@ -88,26 +101,6 @@ struct DisplayContainerView: View {
         .sheet(isPresented: $showDurability) {
             HostDurabilitySheet()
         }
-        .onAppear {
-            guard !didPresentInitialQR, model.participantURL != nil else { return }
-            didPresentInitialQR = true
-            showParticipantQR = true
-        }
-    }
-
-    private var participantQRButton: some View {
-        Button {
-            showParticipantQR = true
-        } label: {
-            Image(systemName: "qrcode")
-                .font(.title3)
-                .foregroundColor(.white)
-                .padding(12)
-                .background(.ultraThinMaterial, in: Circle())
-        }
-        .disabled(model.participantURL == nil)
-        .opacity(model.participantURL == nil ? 0.35 : 1)
-        .accessibilityLabel("参加者用 QR コードを表示")
     }
 
     private var displayModeButton: some View {

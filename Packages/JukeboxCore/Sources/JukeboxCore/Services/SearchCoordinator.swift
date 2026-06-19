@@ -33,17 +33,16 @@ public actor SearchCoordinator {
     }
 
     public func authStatuses(baseURL: String, participant: String? = nil) async -> [ServiceAuthStatus] {
-        [
-            await appleMusicSearcher?.authStatus() ?? ServiceAuthStatus(
-                service: .appleMusic,
-                isConfigured: false,
-                isAuthenticated: false,
-                loginURL: nil,
-                message: "ホストの MusicKit で再生（参加者は曲IDを送信）"
-            ),
-            await SpotifySearchService.shared.authStatus(baseURL: baseURL, participant: participant),
-            await YouTubeSearchService.shared.authStatus(baseURL: baseURL, participant: participant)
-        ]
+        async let appleStatus = appleMusicSearcher?.authStatus() ?? ServiceAuthStatus(
+            service: .appleMusic,
+            isConfigured: false,
+            isAuthenticated: false,
+            loginURL: nil,
+            message: "ホストの MusicKit で再生（参加者は曲IDを送信）"
+        )
+        async let spotifyStatus = SpotifySearchService.shared.authStatus(baseURL: baseURL, participant: participant)
+        async let youtubeStatus = YouTubeSearchService.shared.authStatus(baseURL: baseURL, participant: participant)
+        return [await appleStatus, await spotifyStatus, await youtubeStatus]
     }
 
     public func beginAuth(

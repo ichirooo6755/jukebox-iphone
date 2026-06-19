@@ -36,7 +36,7 @@ struct HostSetupView: View {
                             .foregroundStyle(.pink.gradient)
                         Text("Jukebox Host")
                             .font(.title.bold())
-                        Text("常設 \(hostDeviceLabel) をホストとして起動し、参加者は同じ Wi-Fi からアクセスします")
+                        Text("常設 \(hostDeviceLabel) をホストとして起動します。同一 Wi-Fi またはリモート参加 URL から接続できます")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -75,6 +75,31 @@ struct HostSetupView: View {
                         Text("サーバーを起動すると QR コードが表示されます")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let remoteURL = model.remoteJoinURL, let code = model.remoteJoinCode {
+                    Section("リモート参加（同一 Wi-Fi 不要）") {
+                        ParticipantQRCodeCard(
+                            url: remoteURL,
+                            qrSize: 200,
+                            title: "リモート参加 QR",
+                            caption: "参加コード \(code) — インターネット経由で接続できます"
+                        )
+                        LabeledContent("接続状態", value: model.remoteRelayConnected ? "リレー接続中" : "接続待ち")
+                        Text("参加者はインターネット経由で曲を送信できます。`RELAY_BASE_URL` に公開リレー URL を設定してください。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        #if os(macOS)
+                        Button("リモート参加 URL をコピー") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(remoteURL, forType: .string)
+                        }
+                        #else
+                        Button("リモート参加 URL をコピー") {
+                            UIPasteboard.general.string = remoteURL
+                        }
+                        #endif
                     }
                 }
 

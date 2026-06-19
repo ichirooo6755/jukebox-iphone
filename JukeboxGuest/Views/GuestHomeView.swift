@@ -22,6 +22,7 @@ struct GuestHomeView: View {
                 }
                 .padding()
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("いま再生中")
             .toolbar {
@@ -82,7 +83,11 @@ struct GuestHomeView: View {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
-                        image.resizable().scaledToFill()
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 220, height: 220)
+                            .clipped()
                     default:
                         artworkPlaceholder
                     }

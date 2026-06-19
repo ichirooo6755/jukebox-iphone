@@ -32,6 +32,7 @@
 		45988ABEBBD56BE353F686D2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32332384D447815DC97A42C9 /* Assets.xcassets */; };
 		47C3C44D7249AF2AE4BDCE2C /* AudioRoutePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */; };
 		4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117F4787A2E2B0241DC5EEE1 /* VisualizerView.swift */; };
+		49AD37B926DFCE388C893458 /* RemoteRelayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADF8F9156FC078AD1BCA4FD /* RemoteRelayClient.swift */; };
 		4C18A015C70195A4C593E5C4 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
 		4D999A22C4D233473C70366A /* AudioRoutePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2AC1CD21561F2B909D3BFD0 /* AudioRoutePickerView.swift */; };
 		52DC215FD87393D90054C96F /* PlaylistGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFB18B804FBD7462496928C /* PlaylistGraphView.swift */; };
@@ -64,6 +65,7 @@
 		B3A8BEDFC94DCD73590B7972 /* ParticipantQRCodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C047D56CF7BCA34C9767C8 /* ParticipantQRCodeSheet.swift */; };
 		B5F5408B6D9FBCB60841EA77 /* HostLifecycleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B286CCD27767D18AFBEB97DC /* HostLifecycleManager.swift */; };
 		BC7CA58767A2E043177DB220 /* GuestAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8EEE3752267D25FDEA9C85B /* GuestAccountView.swift */; };
+		BEA3010C5362AE9CECF0433B /* RemoteRelayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADF8F9156FC078AD1BCA4FD /* RemoteRelayClient.swift */; };
 		C3937F3C7B86392FD7B4E2CA /* JukeboxHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BFA60418E3AB53439A6D2FF /* JukeboxHostApp.swift */; };
 		C55897D90458F629CAE300F7 /* JukeboxActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EC8B7E9718904B547238D5A /* JukeboxActivityAttributes.swift */; };
 		C6A1652425D6C70335A86D0B /* JukeboxCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4C9F88725CB4706ABFE35124 /* JukeboxCore */; };
@@ -115,6 +117,7 @@
 		2079A36AF3165208BD1793C7 /* HostDurabilitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDurabilitySheet.swift; sourceTree = "<group>"; };
 		21A4AD0DC5C328DCF6617376 /* HostArtworkURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostArtworkURL.swift; sourceTree = "<group>"; };
 		239A6B2C23B09546B42A0AB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2ADF8F9156FC078AD1BCA4FD /* RemoteRelayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteRelayClient.swift; sourceTree = "<group>"; };
 		32332384D447815DC97A42C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		37A4B91373407D416ADD043C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		42C6F7EF584BC2097EE35192 /* AppleMusicArtworkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicArtworkResolver.swift; sourceTree = "<group>"; };
@@ -221,6 +224,7 @@
 				8563DEE2D5D13A366EE7D252 /* MacAudioDevice.swift */,
 				B8A85C81A8FAFA70CB16A192 /* PlatformServices.swift */,
 				1EAD65C5E3A220A6C57C049B /* PlaybackEngine.swift */,
+				2ADF8F9156FC078AD1BCA4FD /* RemoteRelayClient.swift */,
 				01E263C4E3B2D5D3511FF5F0 /* SecretsLoader.swift */,
 			);
 			path = Services;
@@ -507,7 +511,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\n";
+			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nCOPYFILE_DISABLE=1 ditto --norsrc \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\nxattr -cr \"$DEST\"\nxattr -cr \"${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}\"\n";
 		};
 		AA449CDA5910B7FAD46D6A25 /* Copy Web PWA */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -525,7 +529,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nditto \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\n";
+			shellScript = "set -e\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/web\"\nrm -rf \"$DEST\"\nCOPYFILE_DISABLE=1 ditto --norsrc \"${SRCROOT}/web\" \"$DEST\"\nrm -rf \"$DEST/landing/.netlify\"\nxattr -cr \"$DEST\"\nxattr -cr \"${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -553,6 +557,7 @@
 				7B91F9048632A7CDFF8D6ED5 /* PlatformServices.swift in Sources */,
 				34D91565531C1C3CE5AA7568 /* PlaybackEngine.swift in Sources */,
 				52DC215FD87393D90054C96F /* PlaylistGraphView.swift in Sources */,
+				BEA3010C5362AE9CECF0433B /* RemoteRelayClient.swift in Sources */,
 				9EE8231D2F1BD2652401E96A /* RootView.swift in Sources */,
 				14358B7D143D27E2DA380150 /* SecretsLoader.swift in Sources */,
 				4846B8714A4944750AE854DA /* VisualizerView.swift in Sources */,
@@ -583,6 +588,7 @@
 				AC66F6660A0426C980A73960 /* PlatformServices.swift in Sources */,
 				CC5EBA3D032E09A8DE7BC1F8 /* PlaybackEngine.swift in Sources */,
 				A2F6C0EAED9372F50ACB1104 /* PlaylistGraphView.swift in Sources */,
+				49AD37B926DFCE388C893458 /* RemoteRelayClient.swift in Sources */,
 				F0EBB575F4D6DA4E50EE995C /* RootView.swift in Sources */,
 				45093F018F6C63C5444867FE /* SecretsLoader.swift in Sources */,
 				7714F4715DBE19A7270F9691 /* VisualizerView.swift in Sources */,

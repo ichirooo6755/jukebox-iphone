@@ -9,6 +9,7 @@ enum SecretsLoader {
         "YOUTUBE_CLIENT_ID",
         "YOUTUBE_CLIENT_SECRET",
         "OAUTH_PUBLIC_REDIRECT_URI",
+        "RELAY_BASE_URL",
     ]
 
     static func load() {

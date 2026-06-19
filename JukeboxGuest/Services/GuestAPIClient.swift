@@ -47,6 +47,8 @@ final class GuestAPIClient: ObservableObject {
 
     let webSocket = GuestWebSocketClient()
 
+    private var statePollTask: Task<Void, Never>?
+
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .iso8601
@@ -64,6 +66,9 @@ final class GuestAPIClient: ObservableObject {
         webSocket.onConnectionChange = { [weak self] online in
             Task { @MainActor in
                 self?.isConnected = online
+                if online {
+                    await self?.refreshState()
+                }
             }
         }
     }
@@ -91,6 +96,7 @@ final class GuestAPIClient: ObservableObject {
             await refreshState()
             await refreshAuth()
             reconnectTransport()
+            startStatePolling()
             showToast("ホストに接続しました")
         } catch {
             errorMessage = error.localizedDescription
@@ -101,10 +107,28 @@ final class GuestAPIClient: ObservableObject {
         guard !baseURL.isEmpty else {
             webSocket.disconnect()
             isConnected = false
+            stopStatePolling()
             GuestLiveActivityManager.shared.end()
             return
         }
         webSocket.connect(baseURL: baseURL)
+        startStatePolling()
+    }
+
+    private func startStatePolling() {
+        statePollTask?.cancel()
+        statePollTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled, !baseURL.isEmpty else { continue }
+                await refreshState()
+            }
+        }
+    }
+
+    private func stopStatePolling() {
+        statePollTask?.cancel()
+        statePollTask = nil
     }
 
     private func handle(_ event: JukeboxEvent) {

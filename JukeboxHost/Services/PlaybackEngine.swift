@@ -172,7 +172,8 @@ final class PlaybackEngine: PlaybackControlling {
         let errorHandler = YouTubeMessageHandler { [weak self] in
             Task { @MainActor in
                 guard let self, self.currentItem?.musicID == item.musicID else { return }
-                self.onTrackFinished?()
+                self.isPlaying = false
+                DurabilityLog.record("youtube_embed_error:\(item.musicID)")
             }
         }
         config.userContentController.add(endedHandler, name: "trackEnded")

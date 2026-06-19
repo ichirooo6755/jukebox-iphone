@@ -1,4 +1,4 @@
-import { getBaseURL } from './api.js';
+import { getBaseURL, isRemoteMode } from './api.js';
 
 let socket = null;
 let reconnectTimer = null;
@@ -15,6 +15,11 @@ function emit(event) {
 
 export function connect() {
   disconnect();
+
+  if (isRemoteMode()) {
+    emit({ type: 'connection', online: true });
+    return;
+  }
 
   const wsURL = getBaseURL().replace(/^http/, 'ws') + '/ws';
   socket = new WebSocket(wsURL);

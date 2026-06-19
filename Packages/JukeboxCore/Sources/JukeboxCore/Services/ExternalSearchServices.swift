@@ -419,10 +419,10 @@ public actor SpotifySearchService {
                 if let expiry = persisted.expiry, expiry > Date() {
                     return token
                 }
-                if persisted.refreshToken != nil, let refreshed = try? await refreshUserToken(participant: participant) {
+                if persisted.refreshToken != nil,
+                   let refreshed = try? await refreshUserToken(participant: participant) {
                     return refreshed
                 }
-                return token
             }
         }
         return try await fetchClientCredentialsToken()
@@ -638,11 +638,11 @@ public actor YouTubeSearchService {
         }
 
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let items = json["items"] as? [[String: Any]] else {
+              let rawItems = json["items"] as? [[String: Any]] else {
             return []
         }
 
-        return items.compactMap { item in
+        let tracks = rawItems.compactMap { item -> TrackSearchResult? in
             guard let id = (item["id"] as? [String: Any])?["videoId"] as? String,
                   let snippet = item["snippet"] as? [String: Any],
                   let title = snippet["title"] as? String else { return nil }
@@ -659,6 +659,81 @@ public actor YouTubeSearchService {
                 duration: 0
             )
         }
+
+        return await enrichYouTubeDurations(tracks, participant: participant)
+    }
+
+    private func enrichYouTubeDurations(_ tracks: [TrackSearchResult], participant: String?) async -> [TrackSearchResult] {
+        let ids = tracks.map(\.musicID).filter { !$0.isEmpty }
+        guard !ids.isEmpty else { return tracks }
+        let durations = await fetchVideoDurations(ids: ids, participant: participant)
+        return tracks.map { track in
+            guard let seconds = durations[track.musicID], seconds > 0 else { return track }
+            return TrackSearchResult(
+                title: track.title,
+                artist: track.artist,
+                artworkURL: track.artworkURL,
+                service: track.service,
+                musicID: track.musicID,
+                duration: seconds
+            )
+        }
+    }
+
+    private func fetchVideoDurations(ids: [String], participant: String?) async -> [String: Int] {
+        var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/videos")!
+        components.queryItems = [
+            URLQueryItem(name: "part", value: "contentDetails"),
+            URLQueryItem(name: "id", value: ids.prefix(20).joined(separator: ","))
+        ]
+        guard let url = components.url else { return [:] }
+
+        var request = URLRequest(url: url)
+        if let apiKey, !apiKey.isEmpty {
+            var withKey = components
+            withKey.queryItems?.append(URLQueryItem(name: "key", value: apiKey))
+            guard let keyedURL = withKey.url else { return [:] }
+            request = URLRequest(url: keyedURL)
+        } else if let token = try? await usableToken(participant: participant) {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            return [:]
+        }
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["items"] as? [[String: Any]] else {
+            return [:]
+        }
+
+        var result: [String: Int] = [:]
+        for item in items {
+            guard let id = item["id"] as? String,
+                  let details = item["contentDetails"] as? [String: Any],
+                  let raw = details["duration"] as? String else { continue }
+            result[id] = parseISO8601Duration(raw)
+        }
+        return result
+    }
+
+    private func parseISO8601Duration(_ value: String) -> Int {
+        var seconds = 0
+        var number = ""
+        for char in value {
+            if char.isNumber {
+                number.append(char)
+            } else if let n = Int(number) {
+                switch char {
+                case "H": seconds += n * 3600
+                case "M": seconds += n * 60
+                case "S": seconds += n
+                default: break
+                }
+                number = ""
+            }
+        }
+        return seconds
     }
 
     public func fetchPlaylist(playlistID: String, participant: String?) async -> PlaylistSummary? {

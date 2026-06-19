@@ -2,8 +2,41 @@ const STORAGE_HOST = 'jukebox_host_url';
 const STORAGE_NICKNAME = 'jukebox_nickname';
 const STORAGE_ONBOARDED = 'jukebox_onboarded';
 const STORAGE_PROFILES = 'jukebox_service_profiles';
+const STORAGE_SERVICE = 'jukebox_preferred_service';
+const STORAGE_REMOTE = 'jukebox_remote_mode';
+const STORAGE_RELAY_ORIGIN = 'jukebox_relay_origin';
+const STORAGE_JOIN_CODE = 'jukebox_join_code';
 
+let authStatusCache = { data: null, at: 0 };
 let baseURL = localStorage.getItem(STORAGE_HOST) || window.location.origin;
+
+export function isRemoteMode() {
+  return localStorage.getItem(STORAGE_REMOTE) === '1' && Boolean(getJoinCode());
+}
+
+export function getJoinCode() {
+  return localStorage.getItem(STORAGE_JOIN_CODE) || '';
+}
+
+export function getRelayOrigin() {
+  return localStorage.getItem(STORAGE_RELAY_ORIGIN) || '';
+}
+
+export function configureRemoteJoin(relayOrigin, joinCode) {
+  const origin = relayOrigin.replace(/\/$/, '');
+  const code = joinCode.trim().toUpperCase();
+  const proxy = `${origin}/api/relay/rooms/${code}/proxy`;
+  setBaseURL(proxy);
+  localStorage.setItem(STORAGE_REMOTE, '1');
+  localStorage.setItem(STORAGE_RELAY_ORIGIN, origin);
+  localStorage.setItem(STORAGE_JOIN_CODE, code);
+}
+
+export function clearRemoteMode() {
+  localStorage.removeItem(STORAGE_REMOTE);
+  localStorage.removeItem(STORAGE_RELAY_ORIGIN);
+  localStorage.removeItem(STORAGE_JOIN_CODE);
+}
 
 export function getBaseURL() {
   return baseURL.replace(/\/$/, '');
@@ -28,6 +61,23 @@ export function isOnboarded() {
 
 export function setOnboarded() {
   localStorage.setItem(STORAGE_ONBOARDED, '1');
+}
+
+export function getPreferredService() {
+  return localStorage.getItem(STORAGE_SERVICE) || '';
+}
+
+export function setPreferredService(service) {
+  if (service) localStorage.setItem(STORAGE_SERVICE, service);
+  else localStorage.removeItem(STORAGE_SERVICE);
+}
+
+export function isServiceConnected() {
+  return localStorage.getItem('jukebox_service_connected') === '1' || getPreferredService() === 'apple_music';
+}
+
+export function setServiceConnected(value = true) {
+  localStorage.setItem('jukebox_service_connected', value ? '1' : '0');
 }
 
 export function saveServiceProfiles(statuses) {
@@ -140,7 +190,14 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ service, artist_id: artistID, added_by: addedBy, limit }),
   }),
-  authStatus: (participant = getNickname()) => request(withParticipant('/api/auth/status', participant)),
+  authStatus: async (participant = getNickname(), { force = false } = {}) => {
+    if (!force && authStatusCache.data && Date.now() - authStatusCache.at < 30_000) {
+      return authStatusCache.data;
+    }
+    const data = await request(withParticipant('/api/auth/status', participant));
+    authStatusCache = { data, at: Date.now() };
+    return data;
+  },
   discover: () => request('/api/discover'),
   discoverAt: async (baseURL) => {
     const base = baseURL.replace(/\/$/, '');
@@ -173,6 +230,15 @@ export async function discoverHosts() {
     `http://jukebox.local:${port}`,
     `${window.location.protocol}//${window.location.hostname}:${port}`,
   ]);
+
+  if (isRemoteMode()) {
+    const origin = getRelayOrigin();
+    const code = getJoinCode();
+    if (origin && code) {
+      candidates.add(`${origin}/api/relay/rooms/${code}/proxy`);
+    }
+  }
+
   const found = [];
   await Promise.all([...candidates].map(async (base) => {
     const info = await api.discoverAt(base);

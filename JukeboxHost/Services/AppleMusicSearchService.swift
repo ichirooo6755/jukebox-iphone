@@ -3,6 +3,8 @@ import JukeboxCore
 import MusicKit
 
 struct AppleMusicSearchService: AppleMusicSearching {
+    private static var lastCatalogError: String?
+
     static func requestAuthorization() async -> Bool {
         let status = await MusicAuthorization.request()
         return status == .authorized
@@ -10,21 +12,39 @@ struct AppleMusicSearchService: AppleMusicSearching {
 
     func authStatus() async -> ServiceAuthStatus {
         let authorized = MusicAuthorization.currentStatus == .authorized
+        var message = authorized
+            ? "ホストの Apple Music カタログで検索・再生"
+            : "ホストアプリで Apple Music を許可してください"
+        if authorized, let catalogError = Self.lastCatalogError {
+            message += "（カタログ: \(catalogError)）"
+        }
         return ServiceAuthStatus(
             service: .appleMusic,
             isConfigured: true,
             isAuthenticated: authorized,
             loginURL: nil,
-            message: authorized ? "ホストの MusicKit で再生（参加者は曲IDを送信）" : "ホストアプリで Apple Music を許可してください"
+            message: message
         )
     }
 
     func search(query: String) async -> [TrackSearchResult] {
         guard MusicAuthorization.currentStatus == .authorized else { return [] }
 
-        async let catalogResults = searchCatalogSongs(query: query)
-        async let libraryResults = searchLibrarySongs(query: query)
-        return await dedupeTracks(catalogResults + libraryResults).prefix(20).map { $0 }
+        let catalogResults = await searchCatalogSongs(query: query)
+        let libraryResults = await searchLibrarySongs(query: query)
+        if catalogResults.isEmpty, !libraryResults.isEmpty, Self.lastCatalogError != nil {
+            return libraryResults.prefix(20).map { track in
+                TrackSearchResult(
+                    title: track.title,
+                    artist: "\(track.artist) · マイライブラリ",
+                    artworkURL: track.artworkURL,
+                    service: track.service,
+                    musicID: track.musicID,
+                    duration: track.duration
+                )
+            }
+        }
+        return dedupeTracks(catalogResults + libraryResults).prefix(20).map { $0 }
     }
 
     func unifiedSearch(query: String) async -> [UnifiedSearchResult] {
@@ -64,19 +84,24 @@ struct AppleMusicSearchService: AppleMusicSearching {
 
     private func searchCatalogSongs(query: String) async -> [TrackSearchResult] {
         var request = MusicCatalogSearchRequest(term: query, types: [Song.self])
-        request.limit = 15
+        request.limit = 20
 
-        guard let response = try? await request.response() else { return [] }
-
-        return response.songs.map { song in
-            TrackSearchResult(
-                title: song.title,
-                artist: song.artistName,
-                artworkURL: artworkURL(from: song.artwork),
-                service: .appleMusic,
-                musicID: song.id.rawValue,
-                duration: Int(song.duration ?? 0)
-            )
+        do {
+            let response = try await request.response()
+            Self.lastCatalogError = nil
+            return response.songs.map { song in
+                TrackSearchResult(
+                    title: song.title,
+                    artist: song.artistName,
+                    artworkURL: artworkURL(from: song.artwork),
+                    service: .appleMusic,
+                    musicID: song.id.rawValue,
+                    duration: Int(song.duration ?? 0)
+                )
+            }
+        } catch {
+            Self.lastCatalogError = error.localizedDescription
+            return []
         }
     }
 

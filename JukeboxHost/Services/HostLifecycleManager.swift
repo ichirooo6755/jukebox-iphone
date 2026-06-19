@@ -35,11 +35,7 @@ final class HostLifecycleManager {
         sleepInhibitor.start()
         #endif
 
-        #if os(iOS)
-        pathMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
-        #else
         pathMonitor = NWPathMonitor()
-        #endif
         pathMonitor?.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
                 guard let self else { return }

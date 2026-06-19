@@ -151,6 +151,12 @@ public final class QueueDatabase: @unchecked Sendable {
         return first
     }
 
+    public func peekFirst() throws -> QueueItem? {
+        lock.lock()
+        defer { lock.unlock() }
+        return fetchQueue().first
+    }
+
     public func registerUser(nickname: String) throws -> UserProfile {
         let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {

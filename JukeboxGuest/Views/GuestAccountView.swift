@@ -15,6 +15,7 @@ struct GuestAccountView: View {
                 servicesSection
                 liveActivitySection
             }
+            .scrollDismissesKeyboard(.interactively)
             .listStyle(.insetGrouped)
             .navigationTitle("アカウント")
             .task {

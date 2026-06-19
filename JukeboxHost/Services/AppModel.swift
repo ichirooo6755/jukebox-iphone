@@ -41,6 +41,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var serviceAuthStatuses: [ServiceAuthStatus] = []
     @Published private(set) var displayedHostIP: String?
+    @Published private(set) var remoteJoinCode: String?
+    @Published private(set) var remoteJoinURL: String?
+    @Published private(set) var remoteRelayConnected = false
     @Published var displayMode: HostDisplayMode = .nowPlayingQueue
     @Published private(set) var visualizerLevels: [CGFloat] = Array(repeating: 0.1, count: 32)
     @Published var crossfadeOpacity: Double = 1.0
@@ -69,15 +72,13 @@ final class AppModel: ObservableObject {
     private var visualizerTask: Task<Void, Never>?
     private var subscriptionID: UUID?
     private let resolvedWebRoot: URL?
+    private let remoteRelay = RemoteRelayClient()
 
     private var webRoot: URL? { resolvedWebRoot }
 
     private static func resolveWebRoot() -> URL? {
         let fm = FileManager.default
-        var candidates: [URL] = [
-            Bundle.main.resourceURL?.appendingPathComponent("web"),
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/web"),
-        ].compactMap { $0 }
+        var candidates: [URL] = []
 
         #if DEBUG
         let sourceFile = URL(fileURLWithPath: #filePath)
@@ -87,6 +88,11 @@ final class AppModel: ObservableObject {
             .deletingLastPathComponent()
         candidates.append(repoRoot.appendingPathComponent("web"))
         #endif
+
+        candidates.append(contentsOf: [
+            Bundle.main.resourceURL?.appendingPathComponent("web"),
+            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/web"),
+        ].compactMap { $0 })
 
         for root in candidates {
             let index = root.appendingPathComponent("index.html")
@@ -172,6 +178,7 @@ final class AppModel: ObservableObject {
                 onNetworkRestored: { [weak self] in await self?.handleNetworkRestored() },
                 onServerRestartNeeded: { [weak self] in await self?.restartServerIfNeeded() }
             )
+            await startRemoteRelayIfConfigured()
         } catch {
             errorMessage = "サーバー起動に失敗: \(error.localizedDescription)"
             isServerRunning = false
@@ -179,6 +186,10 @@ final class AppModel: ObservableObject {
     }
 
     func stopHostServer() async {
+        remoteRelay.stop()
+        remoteJoinCode = nil
+        remoteJoinURL = nil
+        remoteRelayConnected = false
         lifecycle.stop()
         progressTask?.cancel()
         visualizerTask?.cancel()
@@ -201,6 +212,7 @@ final class AppModel: ObservableObject {
     private func handleNetworkRestored() async {
         await refreshJoinAddress()
         await restartServerIfNeeded()
+        await startRemoteRelayIfConfigured()
     }
 
     func restartServerIfNeeded() async {
@@ -246,6 +258,9 @@ final class AppModel: ObservableObject {
             wifiConnected: JukeboxServer.localIPAddress() != nil
         )
         playbackState = await store.currentState()
+        remoteJoinCode = remoteRelay.joinCode
+        remoteJoinURL = remoteRelay.joinURL
+        remoteRelayConnected = remoteRelay.isConnected
     }
 
     private func refreshAuthStatuses() async {
@@ -298,5 +313,20 @@ final class AppModel: ObservableObject {
             return false
         }
         return true
+    }
+
+    private func startRemoteRelayIfConfigured() async {
+        guard let relayURL = RemoteRelayClient.relayBaseURLFromEnvironment() else { return }
+        remoteRelay.configure { [weak self] in
+            guard let self else { return NowPlayingState.empty }
+            return await self.store.currentState()
+        }
+        await remoteRelay.start(relayBaseURL: relayURL, localPort: JukeboxServer.defaultPort)
+        remoteJoinCode = remoteRelay.joinCode
+        remoteJoinURL = remoteRelay.joinURL
+        remoteRelayConnected = remoteRelay.isConnected
+        if let error = remoteRelay.lastError {
+            errorMessage = "リモート参加: \(error)"
+        }
     }
 }
